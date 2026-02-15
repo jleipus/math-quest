@@ -6,12 +6,13 @@ from backend.models.assistant import AnalyseRequest, Stroke
 from backend.models.common import success_response
 from backend.services.llm import llm_service, task_registry
 from backend.services.vision import rasterize_strokes_to_png
+from typing import Any, Dict
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
 
-@router.post("/analyse")
-def analyse(payload: AnalyseRequest) -> dict:
+@router.post("/analyse", response_model=Dict[str, Any])
+def analyse(payload: AnalyseRequest) -> Dict[str, Any]:
     task = task_registry.get(payload.task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Unknown task_id")

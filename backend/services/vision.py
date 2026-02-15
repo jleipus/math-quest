@@ -15,6 +15,6 @@ def rasterize_strokes_to_png(strokes: list[Stroke], width: int = 512, height: in
         points = [(point.x, point.y) for point in stroke.points]
         draw.line(points, fill="black", width=3)
 
-    output = BytesIO()
-    image.save(output, format="PNG")
-    return output.getvalue()
+    with BytesIO() as output:
+        image.save(output, format="PNG")
+        return output.getvalue()

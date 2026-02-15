@@ -53,7 +53,7 @@ class LLMService:
         return tasks
 
     def analyse_student_work(self, question: str, image_png: bytes) -> AnalyseData:
-        _encoded_image = base64.b64encode(image_png).decode("utf-8")
+
         settings = get_settings()
 
         if settings.llm_provider != "mock" and settings.llm_api_key:
