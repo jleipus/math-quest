@@ -1,0 +1,86 @@
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{
+        \begin{tikzpicture}[
+            >={Stealth[length=3mm]},
+            actor/.style={
+                    ellipse, draw=blue!60, fill=blue!8,
+                    minimum width=2.8cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            process/.style={
+                    rectangle, rounded corners=4pt, draw, fill=orange!10,
+                    minimum width=3.5cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            datastore/.style={
+                    rectangle, draw, dashed, fill=purple!10, rounded corners=2pt,
+                    minimum width=3.2cm, minimum height=0.9cm,
+                    align=center, font=\small\itshape
+                },
+            output/.style={
+                    rectangle, rounded corners=4pt, draw=green!50!black, fill=green!8,
+                    minimum width=3.5cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            label/.style={
+                    font=\scriptsize, fill=white, inner sep=1pt
+                },
+            ]
+
+            % Actor
+            \node[actor] (student) {Student\\(Aged 10--12)};
+
+            % Row 1: Input processing
+            \node[process, below=1.8cm of student] (intent) {Input Analysis /\\Intent Classifier};
+
+            % Row 2: Two paths
+            \node[process, below left=1.8cm and 2.5cm of intent] (rag) {RAG Retrieval\\Engine};
+            \node[process, below right=1.8cm and 2.5cm of intent] (difficulty) {Difficulty\\Matching};
+
+            % Row 3: Generation / Reward
+            \node[process, below=1.5cm of rag] (llm) {LLM Generation Layer\\(MiniGuide Constraint)};
+            \node[process, below=1.5cm of difficulty] (reward) {Card Unlock /\\Damage Resolution};
+
+            % Row 4: Outputs
+            \node[output, below=1.5cm of llm] (question) {Guiding Question};
+            \node[output, below=1.5cm of reward] (gamestate) {Updated Game State};
+
+            % Data stores
+            \node[datastore, left=2.5cm of rag] (curriculum) {Curriculum \&\\Heuristics KB};
+            \node[datastore, right=2.5cm of difficulty] (cards) {Game Card\\Assets};
+            \node[datastore, below=4cm of intent] (usermodel) {Dynamic User Model\\(ZPD / Mastery State)};
+
+            % Arrows: Student to system
+            \draw[->] (student) -- node[label, right] {Submit Answer / Ask for Help} (intent);
+
+            % Intent classifier branching
+            \draw[->] (intent) -- node[label, above left] {Needs Help} (rag);
+            \draw[->] (intent) -- node[label, above right] {Answer Submitted} (difficulty);
+
+            % Left path: Help
+            \draw[->] (rag) -- (llm);
+            \draw[->] (llm) -- (question);
+            \draw[->] (curriculum) -- (rag);
+
+            % Right path: Game
+            \draw[->] (difficulty) -- (reward);
+            \draw[->] (reward) -- (gamestate);
+            \draw[->] (cards) -- (difficulty);
+
+            % Outputs back to student
+            \draw[->] (question.south) -- ++(0,-0.5) -| ([xshift=-2cm]student.south) -- (student.south);
+            \draw[->] (gamestate.south) -- ++(0,-0.5) -| ([xshift=2cm]student.south) -- (student.south);
+
+            % User model connections
+            \draw[->, dashed] (usermodel) -- node[label, left] {ZPD} (llm);
+            \draw[->, dashed] (usermodel) -- node[label, right] {Mastery} (difficulty);
+            \draw[<-, dashed] ([xshift=-5mm]usermodel.north) -- ++(0,0.4) -| node[label, near start, left] {Log Interaction} ([xshift=5mm]question.east) -- (question.east);
+            \draw[<-, dashed] ([xshift=5mm]usermodel.north) -- ++(0,0.4) -| node[label, near start, right] {Update Mastery} ([xshift=-5mm]gamestate.west) -- (gamestate.west);
+
+        \end{tikzpicture}
+    }
+
+    \caption{Data flow diagram of the system architecture. Solid arrows indicate the primary data flow; dashed arrows indicate reads from and writes to the Dynamic User Model.}
+    \label{fig:data_flow_diagram}
+\end{figure}

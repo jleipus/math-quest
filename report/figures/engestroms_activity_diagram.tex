@@ -1,0 +1,58 @@
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.9\textwidth}{!}{
+        \begin{tikzpicture}[
+            >={Stealth[length=3mm]},
+            box/.style={
+                    rectangle, rounded corners=4pt, draw, fill=blue!15,
+                    minimum width=3.2cm, minimum height=1cm, align=center, font=\small
+                },
+            desc/.style={
+                    font=\small, align=center
+                },
+            ]
+
+            % Top
+            \node[box] (instruments) {Instruments};
+
+            % Middle
+            \node[box, below left=2cm and 1cm of instruments] (subject) {Subject};
+            \node[box, below right=2cm and 1cm of instruments] (object) {Object};
+
+            % Bottom
+            \node[box, below left=2cm and 1cm of subject] (rules) {Rules};
+            \node[box, below right=2cm and 1cm of object] (division) {Division of\\Labor};
+            \node[box] at ($(rules)!0.5!(division)$) (community) {Community};
+
+            % Descriptions
+            \node[desc, right=0.3cm of instruments] {Standard generative AI chatbots};
+            \node[desc, left=0.3cm of subject] {Students aged 10--12};
+            \node[desc, right=0.3cm of object] {Acquire mathematical\\reasoning skills};
+            \node[desc, left=0.3cm of rules] {Curriculum standards,\\time constraints,\\classroom norms};
+            \node[desc, below=0.2cm of community] {Mixed-ability classroom};
+            \node[desc, right=0.3cm of division] {Single Teacher};
+
+            % Arrows
+            \draw[<->] (subject) -- (instruments);
+            \draw[<->] (instruments) -- (object);
+            \draw[<->] (subject) -- (object);
+
+            \draw[<->] (subject) -- (rules);
+            \draw[<->] (subject) -- (community);
+            \draw[<->] (subject) -- (division);
+
+            \draw[<->] (object) -- (rules);
+            \draw[<->] (object) -- (community);
+            \draw[<->] (object) -- node[right, font=\small\itshape, red!70!black] {Primary Contradiction} (division);
+
+            \draw[<->] (instruments) -- (community);
+
+            \draw[<->] (rules) -- (community);
+            \draw[<->] (community) -- node[below, font=\small\itshape, red!70!black, align=center] {Insufficient support\\within students' ZPD} (division);
+
+        \end{tikzpicture}
+    }
+
+    \caption{Engestr\"om's activity system of the current mathematics classroom.}
+    \label{fig:activity_system}
+\end{figure}

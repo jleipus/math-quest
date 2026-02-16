@@ -1,0 +1,91 @@
+\section{Methods}
+
+% Describe the design process you plan to use and its tasks, how collaboration with stakeholders outside the course will be organised (societal organisation, researchers), any divisions of responsibilities, etc. Apply a participatory design methodology. The following headlines are used for organising the content of these different aspects. Remember that the methods and theories you choose are key to be able to answer your research questions!
+
+We employ a participatory design process defined by iterative cycles of co-design, prototyping, and reflection~\cite{sanders2008evolving}. Collaborative tasks range from identifying learning goals to refining prototypes with stakeholders, including 10 to 12 year-old learners and educators. Stakeholders contribute domain knowledge, while our team manages prototyping, and ensures theoretical alignment.
+
+\subsection{Analysis of the Use Situation}
+
+% Analyse and describe a use scenario using theories presented in this course, in particular, Self-Determination Theory (needs and types of motivation), Self-Classification Theory, and Activity Theory (AT) (apply the following AT models: hierarchical model of activity, Engestr�m�s model, ZPD). Take as starting point the activity to be performed, the environment, the potential end users, and potential digital/physical material/instruments. The analysis forms the basis for the knowledge base and user models. Plan using the theories to prepare for what information and knowledge to obtain in meetings with stakeholders.
+
+The use situation is situated within the mathematics classroom for students aged 10--12. While the subject (the student) aims to acquire mathematical reasoning skills (object), the community context is defined by heterogeneity, where student capabilities within a single class often span several grades. This disparity creates a conflict in the division of labor: a single teacher cannot simultaneously provide the individualized scaffolding required to keep every student within their optimal Zone of Proximal Development (ZPD)~\cite{vygotsky1978mind}. Consequently, students often turn to the alternative avenues, such as standard AI chatbots, to get procure answers, rather than engaging in problem-solving.
+
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{engestroms_activity_system.png}
+%     \caption{Engestr\"om's activity system of the current mathematics classroom}
+%     \label{fig:eng_act_sys}
+% \end{figure}
+
+\input{figures/engestroms_activity_diagram}
+
+As illustrated in Figure \ref{fig:activity_system}, the primary systemic contradiction emerges between the division of labor (a single teacher) and the heterogeneous classroom community. This misalignment results in insufficient individualized scaffolding within students' ZPD.
+
+\subsection{Use Scenario}
+
+% Provide a brief scenario for what your demonstrator will do in collaboration with a user.
+
+The user, a learner, plays a card-based combat game where each card is locked by a mathematical challenge. To unlock and play a card, the learner must solve the associated problem; incorrect answers result in taking damage. The goal is to defeat an adversary and advance to a further stage. When stuck on a challenge, the learner can prompt an in-game agent for help. The agent does not provide the answer directly, but instead asks guiding questions to help the learner reason through the problem. Over the course of a session, the system adapts to the learner's strengths and weaknesses, tailoring both the difficulty of challenges and the guidance provided.
+
+\input{figures/gameplay_diagram}
+
+\subsection{Procedure for the Participatory Design Process Involving Stakeholders}
+
+% What stakeholders would be interesting to involve, which ones are available? What will be focused in meetings with stakeholders? How can you set up the meetings to most efficiently engage them in the design?
+
+To ensure the system aligns with both pedagogical standards and the motivational needs of the target group, the design procedure organizes collaboration with a mathematics teacher and students aged 10--12. We will conduct short, hands-on sessions with teachers and learners to define goals, mechanics, and inclusion needs. The process includes two initial concept sessions, followed by a prototype walkthrough and evaluation. In these sessions, students will be asked to critique the game assets and dialogue style, thereby allowing them to shape the ``rewards'' that support their sense of autonomy and competence~\cite{ryan2000self}. Each meeting produces prioritized action items to directly inform the next iteration.
+
+\subsection{Anticipated Design Solution that will be Evaluated with Tentative Users}
+
+% What will the anticipated design that will be evaluated with tentative users consist of based on what you know now? Will there be elements of behaviour change techniques? What kind of social behaviour?
+
+The core of the design is a dynamic User Model operationalized within a RAG architecture, designed to function as a ``More Knowledgeable Peer''. The system employs the ``MiniGuide" strategy as a strict constraint on the RAG generation layer, thereby forcing the LLM to generate guiding questions that maintain the learner within their ZPD.
+
+\subsubsection{Game Design}
+
+The learner plays a card-based combat game inspired by the roguelike deck-building genre. Each card in the player's hand is locked behind a mathematical challenge matched to their current ability level. To unlock and play a card, the learner must correctly solve the associated problem. The goal is to defeat an adversary and advance to the next stage, creating a gameplay loop where mathematical reasoning is the core mechanic rather than an interruption.
+
+Cards vary in power, and stronger cards are gated by harder problems. This coupling serves a dual purpose: it motivates learners to attempt more difficult challenges for strategic advantage, and it naturally prevents progress without genuine mathematical engagement. Crucially, incorrect answers carry an in-game consequence in the form of taking damage, mirroring the stakes of an actual game combat encounter. This mechanic discourages random guessing and stalling for better hints, ensuring that learners engage thoughtfully with each problem rather than treating the math as a low-cost obstacle to click through~\cite{xu2023exploring}.
+
+\subsubsection{Scaffolding Through the MiniGuide Strategy}
+
+When a learner is stuck on a challenge, they can request help from an in-game agent. Rather than providing the answer, the agent follows the MiniGuide strategy: it first diagnoses the learner's current state using the User Model, then retrieves relevant curricular content from a knowledge base via RAG, and finally generates a guiding question designed to nudge the learner toward the solution. This preserves the learner's agency and keeps them actively reasoning, consistent with scaffolding principles from Vygotsky's ZPD framework~\cite{vygotsky1978mind}.
+
+The strict constraint on the generation layer ensures the LLM never produces direct answers. Instead, its output is limited to diagnostic questions, hints, and prompts for reflection — functioning as a peer who helps the learner think, not one who thinks for them.
+
+\subsubsection{Dynamic User Model}
+
+Throughout a learning session, the system builds and refines a User Model that captures the learner's current mastery across mathematical topics, common error patterns, and help-seeking behavior. This model informs both the difficulty of challenges presented and the type of guidance the agent provides. For example, a learner who consistently struggles with fractions will receive challenges and scaffolding tailored to that gap, while a learner who frequently requests hints without attempting a solution first may receive prompts that encourage independent effort before offering guidance.
+
+The User Model is stored as part of the RAG context, meaning the agent's responses become increasingly personalized over the course of a session. This allows the system to adapt in real time, adjusting both the game difficulty and the pedagogical approach to keep the learner within their ZPD.
+
+\subsubsection{Gamification and Motivation}
+
+The game structure is designed to align with Self-Determination Theory~\cite{ryan2000self} by supporting autonomy (choosing which cards to attempt), competence (solving challenges at an appropriate difficulty), and relatedness (interacting with the in-game agent as a supportive peer). Because card power is tied to problem difficulty relative to the learner's level, both high-performing and struggling learners face meaningful challenges — avoiding boredom for advanced students and reducing anxiety for those who need more support.
+
+Importantly, progress in the game is contingent on demonstrated mathematical reasoning, not on gaming patterns or rote repetition. This transforms the friction of learning into a core part of the reward loop rather than an obstacle to it.
+
+% \input{diagrams/data_flow_diagram.tex}
+
+\subsection{Material and software}
+
+% List the software that you would like to use and other material. Other material can be publicly available data sets, ontologies, etc. Available robots are the Furhat robot, and a NAO robot.
+
+The prototype adopts a decoupled client-server web architecture to enable rapid prototyping and broad accessibility on standard school devices without requiring software installation. The frontend is developed using Next.js, a modern web framework built upon React, to manage the interactive gamified interface. Server-side logic is handled through a Python FastAPI backend, which orchestrates the RAG pipeline, game logic, and user modeling components.
+
+A multimodal Large Language Model is required to process handwritten mathematical input from the canvas interface. The prototype will initially use Google Gemini for both handwriting recognition and guided response generation, but the long-term architecture anticipates replacing the handwriting processing with a locally hosted CNN, which would allow the LLM to be substituted with a text-only, EU-based model to better align with data privacy requirements for use in schools.
+
+The RAG framework is connected to a curriculum-aligned knowledge base indexed within a vector database. For mathematical content, the system draws on Matteboken.se, a free and comprehensive digital mathematics resource provided by the Swedish nonprofit Mattecentrum. The platform covers the full Swedish curriculum for mellanstadiet (grades 4--6), including arithmetic operations, geometry, units of measurement, statistics, and time, providing a structured and openly accessible content base for the retrieval corpus.
+
+Future improvments would introduce persistent storage mechanisms (such as a relational database) maintain each student's dynamic user model, including mastery levels and unlocked game assets, etc.
+
+\subsection{Evaluation setup}
+
+% What will be focused in meetings with tentative users? What will be evaluated? What participants?
+
+The evaluation adopts an exploratory, qualitative approach appropriate for the prototype's early stage of development. It consists of two sessions with distinct participant groups.
+
+The first session involves a teacher acting as the domain expert. This meeting focuses on evaluating the RAG system's generation layer: whether the guiding questions produced by the MiniGuide strategy are pedagogically appropriate, factually accurate, and avoid leaking direct answers. Teachers will interact with the system and provide structured feedback on the relevance of the scaffolding.
+
+The second session is a supervised demo with a small group of primary school students aged 10--12. This session focuses on usability and engagement rather than learning outcomes, as a single session is insufficient to measure knowledge gains. Observational notes will capture how students interact with the card-based challenge loop, whether the help agent is used and perceived as helpful, and whether the damage mechanic discourages guessing without causing frustration. Short post-session reflections will gather students' subjective experience of difficulty, enjoyment, and willingness to continue playing.
+Together, these sessions aim to validate the core interaction design.

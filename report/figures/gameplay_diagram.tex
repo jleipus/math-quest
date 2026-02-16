@@ -1,0 +1,85 @@
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{
+        \begin{tikzpicture}[
+            >={Stealth[length=3mm]},
+            startstop/.style={
+                    circle, fill=black,
+                },
+            action/.style={
+                    rectangle, rounded corners=4pt, draw, fill=blue!8,
+                    minimum width=3.8cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            decision/.style={
+                    diamond, draw, fill=orange!15,
+                    minimum width=2cm, minimum height=1.5cm,
+                    align=center, aspect=2, font=\small
+                },
+            output/.style={
+                    rectangle, rounded corners=4pt, draw=green!50!black, fill=green!8,
+                    minimum width=3.8cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            label/.style={
+                    font=\scriptsize, fill=white, inner sep=1pt
+                },
+            ]
+
+            % Main Flow
+            \node[startstop] (start) {};
+            \node[action, below=of start] (present) {Present Math Challenge};
+            \node[action, below=of present] (attempt) {Student Submits Answer};
+            \node[decision, below=3cm of attempt] (correct) {Correct?};
+
+            % Right path: Correct
+            \node[action, right=1.4cm of correct] (unlock) {Unlock Card};
+            \node[action, below=of unlock] (play) {Play Card in Combat};
+            \node[decision, below=of play] (won) {Enemy\\Defeated?};
+            \node[output, left=of won] (advance) {Advance to\\Next Stage};
+
+            % Left path: Incorrect
+            \node[action, left=1.4cm of correct] (damage) {Take Damage};
+            \node[decision, below=of damage] (alive) {Still\\Alive?};
+            \node[output, right=of alive] (gameover) {Game Over};
+
+            % Help path
+            \node[action, left=of attempt] (askhelp) {Request Help\\from Agent};
+            \node[action, below=of askhelp] (guide) {Receive Guiding\\Question};
+
+
+            % Arrows
+
+            % Main flow
+            \draw[->] (start) -- (present);
+            \draw[->] (present) -- (attempt);
+            \draw[->] (attempt) -- (correct);
+
+            % Correct path
+            \draw[->] (correct) -- node[label, above] {Yes} (unlock);
+            \draw[->] (unlock) -- (play);
+            \draw[->] (play) -- (won);
+            \draw[->] (won) -- node[label, above] {Yes} (advance);
+
+            % Incorrect path
+            \draw[->] (correct) -- node[label, above] {No} (damage);
+            \draw[->] (damage) -- (alive);
+            \draw[->] (alive) -- node[label, above] {No} (gameover);
+
+            % Loop back: enemy not defeated
+            \draw[->] (won.south) -- ++(0,-0.5) -| node[label, near start, right] {No} ([xshift=5.2cm]present.east) -- (present.east);
+
+            % Loop back: still alive, retry
+            \draw[->] (alive.south) -- ++(0,-0.5) -| node[label, near start, left] {Yes} ([xshift=-5.4cm]present.west) -- (present.west);
+
+            % Help path
+            \draw[->] (attempt) -- node[label, above] {Stuck} (askhelp);
+            \draw[->] (askhelp) -- (guide);
+            \draw[->] (guide.south) -- ++(0,-0.5) -| ([xshift=-0.5cm]attempt.south);
+
+        \end{tikzpicture}
+    }
+
+    \caption{Activity diagram of the gameplay loop.}
+    \label{fig:gameplay_diagram}
+\end{figure}
