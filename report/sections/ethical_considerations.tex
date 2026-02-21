@@ -1,0 +1,9 @@
+\section{Ethical Considerations}
+
+% Reflect upon ethical considerations with the overall purpose of your project, aspects relating to choices of technological solutions, how mechanisms are implemented (social norms?), and regarding testing with the targeted user group. Reflect also how your project could contribute to ethical concerns in a long-term perspective in the organisation(s) you and the potential design solution operate.
+
+The involvement of children aged 10--12 in evaluation sessions requires informed consent from both parents and participants, with clear communication that participation is voluntary and withdrawal is possible at any time. During the student demo session, no personally identifiable information will be collected, and any observational notes will be anonymized.
+
+The prototype currently relies on Google Gemini, meaning student input — including handwritten mathematical work — is processed by a third-party cloud service outside the EU. For the evaluation phase, this is managed by ensuring no personal data is included in the prompts. This dependency motivates the planned shift toward a locally hosted CNN for handwriting recognition paired with an EU-based LLM, better aligning with GDPR requirements for use in Swedish schools.
+
+Finally, positioning an AI as a ``More Knowledgeable Peer'' carries a risk of displacing peer collaboration and teacher interaction over time. The MiniGuide strategy mitigates passive dependency by never providing direct answers, but in a long-term deployment the system should remain a complement to human instruction, with teachers retaining full pedagogical authority~\cite{lindgren2024emerging}.

@@ -1,0 +1,9 @@
+\section{Discussion}
+
+% Briefly discuss your choices of methodology, (technical) solutions other results.
+
+The choice of a RAG architecture over a fine-tuned model reflects a pragmatic trade-off. RAG allows grounding in verified curriculum content without the cost and data requirements of fine-tuning, and makes the system's knowledge base transparent and editable by educators. However, it limits the depth of pedagogical reasoning the system can perform — the quality of scaffolding depends heavily on what is in the retrieval corpus and how well the MiniGuide prompt constraint shapes the LLM's output.
+
+The decision to use Google Gemini as the LLM introduces a dependency on a third-party, non-EU cloud service. This is acceptable for prototyping but would need to be resolved before any classroom deployment. The planned migration to a local CNN for handwriting recognition and an EU-based text-only LLM addresses this, though it introduces a different trade-off: a smaller, local model may produce lower-quality scaffolding than a frontier multimodal model.
+
+The evaluation methodology is limited in scope. Two sessions — one with teachers, one with students — can validate the interaction design and surface usability issues, but cannot measure learning outcomes, long-term engagement, or the effectiveness of the adaptive difficulty system. These would require longitudinal studies with larger participant groups.

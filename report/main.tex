@@ -1,7 +1,14 @@
 \documentclass{IOS-Book-Article}
 
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
 \usepackage{mathptmx}
-\usepackage{soul}\setuldepth{article}
+\usepackage{soul}
+\setuldepth{article}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
 
 % \usepackage{times}
 % \normalfont
@@ -18,7 +25,7 @@
 
     % \pretitle{Pretitle}
 
-    \title{Supporting Active Learning in Math Tasks: Project Plan}
+    \title{Supporting Active Learning in Math Tasks}
 
     \markboth{}{DAIS 2026\hb}
 
@@ -33,11 +40,7 @@
     \address[A]{Master's Programme in Artificial Intelligence, 2025}
 
     \begin{abstract}
-        Mathematics classrooms often struggle to support students with widely different skill levels, leading to boredom for some and anxiety for others. This project aims to build and test a Retrieval-Augmented Generation (RAG) AI tutor that acts as a supportive "peer" to help students aged 10-12 solve math problems.
-
-        The system uses user modeling to understand each student's specific needs including neurodivergent traits—and provides personalized hints rather than just giving away answers. By combining these math challenges with game-based design, the project seeks to reduce math-related stress and keep students motivated.
-
-        Using a participatory design approach, the team is working with teachers and students to develop a web-based prototype grounded in official Swedish curriculum content. While the goal is to create a more engaging learning experience, the project also focuses on ethical AI use, ensuring student privacy and preventing the AI from giving incorrect information
+        Mathematics classrooms often struggle to support students with widely different skill levels, leading to disengagement for some and anxiety for others. Standard AI chatbots can worsen this by providing direct answers, bypassing the reasoning process that learning depends on. This project presents the design of a gamified web-based tutoring system for primary school students aged 10--12, where mathematical challenges are embedded in a card-based combat game. The system uses a Retrieval-Augmented Generation (RAG) architecture constrained by the ``MiniGuide" pedagogical strategy, ensuring that the AI provides guiding questions rather than direct answers, functioning as a supportive peer that keeps learners within their Zone of Proximal Development. The prototype is built with a Next.js frontend and a FastAPI backend, with scaffolding grounded in Swedish curriculum content. An exploratory evaluation with teachers and students aims to validate whether the interaction design produces appropriate pedagogical guidance and an engaging learning experience.
     \end{abstract}
 
     \begin{keyword}
@@ -56,126 +59,13 @@
 % \thispagestyle{empty}
 % \pagestyle{empty}
 
-\section{Introduction}
-
-% Present the background to your project, why the problem that you are addressing is interesting and challenging from the perspective of responsible design of interactive AI systems. Refer to the theories presented in the course that you expect to be particularly relevant in this project. Refer also to research literature with a reference list that shows the state-of-the-art of how similar problems have been addressed.
-
-Mathematics classrooms face a persistent challenge: a typical class of 10-to-12-year-olds often contains students ranging from a primary grade level to a lower secondary level, creating a situation where high performers frequently become bored, while low performers experience anxiety and helplessness. Traditional teaching methods often struggle to address these individual needs simultaneously.
-
-To address this challenge of varying proficiency levels within a single classroom, research and implementation have shifted from "one-size-fits-all" methods toward several AI-driven personalized approaches. Models such as Personalized Adaptive Gamified e-Learning (PAGE) use machine learning to process student data and dynamically adjust game mechanics, content difficulty, and feedback based on real-time progress, delivering customized learning paths aligned with individual cognitive profiles and sensory preferences\cite{pt2025beyond}. Similarly, Quest-Based Learning (QBL) replaces fixed, linear curricula with a menu of standards-based quests, granting students autonomy over their learning path and pace — an approach shown to reduce completion time and increase persistence\cite{guymon2016quest}. At the modeling level, Reinforcement Learning (RL) and user modeling techniques construct representations of a learner's goals, knowledge, and misconceptions, then optimize difficulty levels and reward structures to keep learners in a productive zone between boredom and frustration\cite{kobsa1990user}.
-
-More recently, the emergence of Generative AI and Large Language Models (LLMs) has introduced a new dimension to this landscape. Generative AI "virtual tutors" can act as 24/7 support systems, providing real-time scaffolding, personalized guidance, and customized learning trajectories to bridge gaps for students who need more immediate assistance. However, while these tools offer significant potential for personalization, current implementations often present new risks to the learning process \cite{pt2025beyond}. Students frequently utilize AI tools to obtain immediate answers rather than to understand underlying concepts, leading to a superficial "illusion of knowledge" where material is not genuinely internalized.
-
-\section{Aim and Research Questions}
-
-% Formulate in one or two sentences what the aim is. Remember to try to push the horizon.
-
-The primary aim of this project is to design and evaluate a prototype Retrieval-Augmented Generation (RAG)-based AI learning system that functions as a supportive "more knowledgeable peer"\cite{vygotsky1978mind} to foster active mathematical reasoning in school students. By combining adaptive scaffolding driven by a dynamic user model — one that approximates each learner's cognitive profile, including neurodivergent characteristics\cite{esteban2017how} - with game-based interaction elements to mitigate mathematical anxiety\cite{lim2012creating}, the system seeks to transform mathematics learning into an engaging, low-stakes, and cognitively supportive experience.
-
-% Formulate 3-4 specific research questions that you aim to focus on in the project. The research questions should be concrete and challenging, not too broad, and possible to answer with the methods that you plan to use.
-
-To achieve this aim, the project investigates the following research questions:
-
-\begin{description}
-
-    \item [RQ1:] How can a dynamic user model be operationalized within a RAG framework to approximate a student's Zone of Proximal Development and deliver scaffolding that promotes active reasoning rather than answer dependency\cite{nirenburg2017cognitive}\cite{ricci2022go}?
-
-    \item [RQ2:] To what extent can game-based design reframe mathematical errors as constructive learning moments, thereby reducing anxiety and sustaining intrinsic motivation\cite{ryan2000self}?
-
-    \item [RQ3:] How effectively does the implementation of the "MiniGuide" pedagogical strategy enable the system to distinguish between learners who are cognitively "stuck" and those who hold conceptual misconceptions, providing heuristic feedback that supports self-correction without prematurely revealing solutions?
-
-    \item [RQ4:] How can user modeling be leveraged to dynamically customize learning paths across diverse learner profiles — including variations in prior knowledge, learning pace, and neurodivergent needs — while maintaining pedagogical coherence within the system?
-
-\end{description}
-
-\section{Methods}
-
-% Describe the design process you plan to use and its tasks, how collaboration with stakeholders outside the course will be organised (societal organisation, researchers), any divisions of responsibilities, etc. Apply a participatory design methodology. The following headlines are used for organising the content of these different aspects. Remember that the methods and theories you choose are key to be able to answer your research questions!
-
-We employ a participatory design process defined by iterative cycles of co-design, prototyping, and reflection\cite{sanders2008evolving}. Collaborative tasks range from identifying learning goals to refining prototypes with stakeholders, including 10-12-year-old learners and educators. Our team manages prototyping, while stakeholders contribute domain knowledge and researchers ensure theoretical alignment.
-
-\subsection{Analysis of the Use Situation}
-
-% Analyse and describe a use scenario using theories presented in this course, in particular, Self-Determination Theory (needs and types of motivation), Self-Classification Theory, and Activity Theory (AT) (apply the following AT models: hierarchical model of activity, Engestr�m�s model, ZPD). Take as starting point the activity to be performed, the environment, the potential end users, and potential digital/physical material/instruments. The analysis forms the basis for the knowledge base and user models. Plan using the theories to prepare for what information and knowledge to obtain in meetings with stakeholders.
-
-We apply three distinct theoretical lenses: Self-Determination Theory to design for autonomy, competence, and relatedness\cite{ryan2000self}; Self-Categorization Theory to frame tasks as "missions" rather than tests to foster a learner identity\cite{turner2012self}; and Activity Theory to model system interactions and locate scaffolding opportunities within the user's environment\cite{kaptelinin1999activity}. This analysis shapes our specific inquiries into classroom constraints and motivational drivers.
-
-\subsection{Use Scenario}
-
-% Provide a brief scenario for what your demonstrator will do in collaboration with a user.
-
-In a short classroom session, a learner solves adaptive math puzzles to advance a construction goal (e.g., building a bridge). The system provides hints and immediate visual progress. This brief, repeatable loop is designed to fit tight class schedules while sustaining motivation through visible achievement.
-
-\subsection{Procedure for the Participatory Design Process Involving Stakeholders}
-
-% What stakeholders would be interesting to involve, which ones are available? What will be focused in meetings with stakeholders? How can you set up the meetings to most efficiently engage them in the design?
-
-We will conduct short, hands-on sessions with teachers and learners to define goals, mechanics, and inclusion needs. The process includes two initial concept sessions, followed by a prototype walkthrough and evaluation. Each meeting produces prioritized action items to directly inform the next iteration.
-
-\subsection{Anticipated Design Solution that will be Evaluated with Tentative Users}
-
-% What will the anticipated design that will be evaluated with tentative users consist of based on what you know now? Will there be elements of behaviour change techniques? What kind of social behaviour?
-
-The prototype will combine math challenges with game progression (badges, levels) and behavior change techniques like goal setting and positive reinforcement\cite{michie2011behaviour}. Social features will focus on cooperation to enhance relatedness. Early evaluation will verify that the game-math coupling is meaningful and supports motivation.
-
-\subsection{Material and software}
-
-% List the software that you would like to use and other material. Other material can be publicly available data sets, ontologies, etc. Available robots are the Furhat robot, and a NAO robot.
-
-The system will be developed as a web application to enable rapid prototyping, easy iteration, and broad accessibility on standard school devices without requiring software installation. The frontend will be built using a modern web framework such as React, with a Python-based backend to handle the RAG pipeline, user modeling, and game logic. The RAG component will leverage an open-source large language model combined with a vector database for retrieval over curriculum-aligned content.
-
-For mathematical content, the system will draw on Matteboken.se, a free and comprehensive digital mathematics resource provided by the Swedish nonprofit Mattecentrum. The platform covers the full Swedish curriculum for mellanstadiet (grades 4-6), including arithmetic operations, geometry, units of measurement, statistics, and time — providing a structured and openly accessible content base from which to construct the retrieval knowledge store.
-
-\subsection{Evaluation setup}
-
-% What will be focused in meetings with tentative users? What will be evaluated? What participants?
-
-Ideally, the initial evaluation will involve 6-10 learners and 1-2 teachers, depending on stakeholder availability.  The goals will be to assess usability, engagement, and perceived learning value. We will measure task completion rates, time on task, and subjective enjoyment to verify if the challenge adapts appropriately and if the feedback supports motivation rather than anxiety.
-
-\section{Time Plan
-  % (to be removed in the report version)
- }
-
-% Try to find room for at least one iteration with action  - reflection � action � reflection, where users are involved. If short of time, decrease the number of participants rather than iterations.
-
-The project operates under a compressed five-week timeline, structured around one user testing session during the demo day with students and at least one separate session with a teacher.
-
-During the first two weeks, the goal is to finalize the RAG pipeline integration with Matteboken.se content, implement core scaffolding logic and basic user model, and develop initial game-based dialogue interface. Progress, including preliminary results will be presented, focussing on how theories and responsible design principles have been addressed.
-
-During the following 2-3 weeks, at least one testing session involving the stakeholder will take place, which will provide data through interaction logs and a short questionnaire. Additionally, pedagogical feedback on scaffolding quality and MiniGuide behavior will be collected. Collected data will be analyzed, and required improvements will subsequently be implemented.
-
-A final testing session involving both the stakeholder and the students will take place upon the demo day, which will also provide valuable insights into necessary future improvements.
-
-\section{Ethical Considerations}
-
-% Reflect upon ethical considerations with the overall purpose of your project, aspects relating to choices of technological solutions, how mechanisms are implemented (social norms?), and regarding testing with the targeted user group. Reflect also how your project could contribute to ethical concerns in a long-term perspective in the organisation(s) you and the potential design solution operate.
-
-Working with primary school children (ages 10-12) raises significant ethical concerns. Informed consent must be obtained from both parents and participants, with clear communication that participation is voluntary and withdrawal is possible at any time. All interaction data will be anonymized, and no personally identifiable information will be stored beyond what is necessary for user modeling during sessions.
-
-The construction of dynamic user models — particularly those approximating cognitive profiles and neurodivergent characteristics — demands careful consideration. There is a risk that such models could inadvertently label or categorize children in ways that reinforce deficit-based narratives. The system must be designed so that user models serve scaffolding purposes only and are never used for assessment, grading, or comparison between students.
-The choice to use an LLM-based system with children also introduces concerns around content safety and hallucination. The RAG architecture mitigates this partially by grounding responses in curriculum-aligned material, but output filtering and teacher oversight remain essential safeguards.
-
-From a longer-term perspective, deploying AI tutoring systems in schools risks creating dependency on technology for learning support, potentially undermining the role of teachers and peer collaboration. The system should be positioned as a complement to — not a replacement for — human instruction. There is also a broader concern that normalizing AI-driven profiling of young learners could contribute to surveillance-oriented educational cultures if adopted without critical institutional reflection.
-
-\section{Expected Results
-  % ("Expected" to be removed in the report version)
- }
-
-% Briefly describe your [expected] results/solution.
-
-The project expects to deliver a functional prototype of a RAG-based AI tutoring system capable of providing adaptive mathematical scaffolding to primary school students. The system should demonstrate the ability to approximate a learner's Zone of Proximal Development through a dynamic user model and adjust its dialogue accordingly — offering heuristic hints via the MiniGuide strategy rather than direct answers. Game-based interaction elements are expected to measurably reduce self-reported mathematical anxiety compared to baseline measures. The result is not expected to be a production-ready tool but rather a research prototype that provides evidence for or against the viability of combining RAG, user modeling, and game-based design for personalized mathematics education.
-
-\section{Discussion}
-
-% Briefly discuss your choices of methodology, (technical) solutions other results.
-
-The choice of a RAG architecture over a fine-tuned model reflects a pragmatic trade-off: RAG allows grounding in verified curriculum content without the cost and data requirements of fine-tuning, but limits the system's ability to generate deeply contextualized pedagogical responses. The user model will capture observable performance patterns but cannot fully account for affective states, social context, or the nuanced judgment a skilled teacher brings.
-
-\subsection{Application of Theories and Principles for Responsible AI Design}
-
-% Obstacles, other reflections?
-
-The system must be transparent enough for teachers and students to understand why it responds the way it does, yet the internal workings of LLMs are inherently opaque. Explainability at the scaffolding level — why a particular hint was chosen — is achievable, but explainability at the language generation level is not. There is also an unresolved tension between personalization and privacy: the more effective the user model, the more data it requires, and the greater the ethical burden of storing and processing children's learning behavior. These obstacles do not invalidate the approach but demand ongoing critical reflection throughout development and deployment.
+\input{sections/introduction}
+\input{sections/aim_research_questions}
+\input{sections/methods}
+\input{sections/time_plan}
+\input{sections/ethical_considerations}
+\input{sections/expected_results}
+\input{sections/discussion}
 
 % \section{Conclusions and Future Work}
 
@@ -184,67 +74,4 @@ The system must be transparent enough for teachers and students to understand wh
 \bibliographystyle{vancouver}
 \bibliography{references}
 
-% \section{About References}
-
-% Please use the Vancouver citing \& reference system, and the National Library of
-% Medicine (NLM) style, and include the Digital Object Identifier (DOI) if known.
-
-% Place citations as numbers in square brackets in the text. All publications cited in
-% the text should be presented in a list of references at the end of the manuscript.
-% List the references in the order in which they appear in the text. Some examples of
-% the NLM style:
-
-% \medskip
-% \noindent\ul{Journal article:}\par\noindent
-% Petitti DB, Crooks VC, Buckwalter JG, Chiu V. Blood pressure levels before dementia.
-% Arch Neurol. 2005 Jan;62(1):112-6, doi: ....
-
-% \medskip
-% \noindent\ul{Paper from a proceedings:}\par\noindent
-% Rice AS, Farquhar-Smith WP, Bridges D, Brooks JW. Canabinoids and pain. In: Dostorovsky
-% JO, Carr DB, Koltzenburg M, editors. Proceedings of the 10th World Congress on Pain;
-% 2002 Aug 17-22; San Diego, CA. Seattle (WA): IASP Press; c2003. p. 437-68, doi: ....
-
-% \medskip
-% \noindent\ul{Contributed chapter in a book:}\par\noindent
-% Whiteside TL, Heberman RB. Effectors of immunity and rationale for immunotherapy. In:
-% Kufe DW, Pollock RE, Weichselbaum RR, Bast RC Jr, Gansler TS, Holland JF, Frei~E~3rd,
-% editors. Cancer medicine 6. Hamilton (ON): BC Decker Inc; 2003. p. 221-8, doi: ....
-
-% %\medskip
-% \smallskip
-% \noindent\ul{Book by author(s):}\par\noindent
-% Jenkins PF. Making sense of the chest x-ray: a hands-on guide. New York: Oxford
-% University Press; 2005. 194 p., doi: ....
-
-% %\medskip
-% \smallskip
-% \noindent\ul{Edited book:}\par\noindent
-% Izzo JL Jr, Black HR, editors. Hypertension primer: the essentials of high blood pressure.
-% 3rd ed. Philadelphia: Lippincott Williams \& Wilkins; c2003. 532 p., doi: ....
-
-% %\medskip
-% \smallskip
-% \noindent\ul{Proceedings:}\par\noindent
-% Ferreira de Oliveira MJ, editor. Accessibility and quality of health services. Proceedings of
-% the 28th Meeting of the European Working Group on Operational Research Applied to Health
-% Services (ORAHS); 2002 Jul 28-Aug 2; Rio de Janeiro, Brazil. Frankfurt (Germany): Peter Lang;
-% c2004. 287 p., doi: ....
-
-% \vspace*{6pt}
-% If your bibliography is structured in the BibTeX format, loading your *.bib file and the provided  BibTeX style vancouver.bst allows you to get the final format of the bibliography. Please note that the bibtex program should be used to generate the *.bbl file.
-
-% \begin{thebibliography}{99}
-
-
-%     \bibitem{r1}
-%     Petitti DB, Crooks VC, Buckwalter JG, Chiu V. Blood pressure levels before dementia.
-%     Arch Neurol. 2005 Jan;62(1):112-6, doi: ....
-
-%     \bibitem{r2}
-%     Rice AS, Farquhar-Smith WP, Bridges D, Brooks JW. Canabinoids and pain. In: Dostorovsky JO,
-%     Carr DB, Koltzenburg M, editors. Proceedings of the 10th World Congress on Pain;  2002 Aug
-%     17-22; San Diego, CA. Seattle (WA): IASP Press; c2003. p. 437-68, doi: ....
-
-% \end{thebibliography}
 \end{document}
