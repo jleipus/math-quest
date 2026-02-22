@@ -31,6 +31,25 @@ From repository root:
 
 API base: `http://127.0.0.1:8000/api/v1`
 
+## LLM Configuration
+
+By default, assistant analysis uses the Gemini provider with automatic fallback to deterministic mock analysis when Gemini is not configured or a call fails.
+
+### Gemini API setup
+
+To use Google Gemini API:
+
+```env
+DAIS_LLM_PROVIDER=gemini
+DAIS_GEMINI_API_KEY=your_gemini_api_key
+DAIS_GEMINI_MODEL=gemini-2.0-flash
+DAIS_GEMINI_API_BASE=https://generativelanguage.googleapis.com/v1beta
+DAIS_GEMINI_TEMPERATURE=0.2
+DAIS_ASSISTANT_CONFIDENCE_THRESHOLD=0.6
+```
+
+If the Gemini call fails (or key is missing), the service automatically falls back to deterministic mock analysis.
+
 ## API Examples (PowerShell)
 
 ### 1) Get curriculum topics

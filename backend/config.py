@@ -16,8 +16,10 @@ class Settings(BaseSettings):
     assistant_confidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
 
     llm_provider: str = "mock"
-    llm_model: str = "gpt-4o-mini"
-    llm_api_key: str | None = None
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_api_base: str = "https://generativelanguage.googleapis.com/v1beta"
+    gemini_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
 
 @lru_cache(maxsize=1)
