@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -11,12 +13,23 @@ class Stroke(BaseModel):
     timestamp_ms: int
 
 
-class AnalyseRequest(BaseModel):
+class HelpRequest(BaseModel):
+    session_id: UUID
+    task_id: UUID
+    student_work: list[Stroke] | None = None
+
+
+class HelpResponse(BaseModel):
+    guiding_question: str
+    context_used: str
+
+
+class AnalysisRequest(BaseModel):
     task_id: str = Field(min_length=1)
     content: str = Field(min_length=2)
 
 
-class AnalyseData(BaseModel):
+class AnalysisResponse(BaseModel):
     has_issue: bool
     message: str
     suggestion: str | None = None

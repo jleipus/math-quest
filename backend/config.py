@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DAIS_", env_file=".env", extra="ignore")
 
-    app_name: str = "DAIS Active Learning API"
+    app_name: str = "MathQuest API"
     app_version: str = "0.1.0"
 
     curriculum_source_url: str = "https://www.matteboken.se/lektioner/mellanstadiet/"
@@ -16,10 +16,22 @@ class Settings(BaseSettings):
     assistant_confidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
 
     llm_provider: str = "mock"
+
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.0-flash"
     gemini_api_base: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+
+    claude_api_key: str | None = None
+    claude_model: str = "claude-sonnet-4-5"
+
+    player_start_hp: int = 100
+    enemy_start_hp: int = 100
+    wrong_answer_damage: int = 15
+    default_hand_size: int = 5
+
+    chroma_persist_dir: str = "./data/chroma"
+    rag_top_k: int = 3
 
 
 @lru_cache(maxsize=1)

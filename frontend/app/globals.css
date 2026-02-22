@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-pixel: "Press Start 2P", monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* ── Colour palette extracted from the parallax mountain pack ── */
+  --px-sky:        #c17fbc; /* dusty mauve sky                  */
+  --px-sky-dark:   #7a3d78; /* deeper purple sky                */
+  --px-mountain:   #4a2040; /* plum mountain silhouette         */
+  --px-mountain-2: #3d1a35; /* darker plum nearer range         */
+  --px-tree:       #1a0a14; /* near-black tree silhouette       */
+  --px-pink:       #d4a0c8; /* pink highlight on mountain peak  */
+  --px-gold:       #f5c842; /* warm gold for UI accents         */
+  --px-gold-dim:   #c89e2a;
+  --px-text:       #f0e6f0; /* off-white readable on dark bg    */
+  --px-text-dim:   #b899b4;
+  --px-panel:      rgba(29, 10, 26, 0.82); /* semi-transparent dark panel */
+  --px-panel-border: #7a3d78;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  background-color: #2a0d26; /* fallback behind the parallax */
+  color: var(--px-text);
 }
+
+/* ─── Pixel font utility ─────────────────────────────────────────── */
+.font-pixel {
+  font-family: var(--font-pixel);
+  image-rendering: pixelated;
+}
+
+/* ─── Pixel-art panel (dark translucent box) ─────────────────────── */
+.px-panel {
+  background: var(--px-panel);
+  border: 2px solid var(--px-panel-border);
+  box-shadow: 0 0 0 2px #1d0a1a, 4px 4px 0 #1d0a1a;
+}
+
+/* ─── Pixel button ───────────────────────────────────────────────── */
+.px-btn {
+  font-family: var(--font-pixel);
+  background: var(--px-gold);
+  color: #1d0a1a;
+  border: 2px solid var(--px-gold-dim);
+  box-shadow: 0 4px 0 var(--px-gold-dim), 4px 4px 0 #1d0a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  image-rendering: pixelated;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.px-btn:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+.px-btn:hover:not(:disabled) {
+  background: #ffd84a;
+}
+.px-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Pixel HP bar ───────────────────────────────────────────────── */
+.px-bar-track {
+  background: #1d0a1a;
+  border: 2px solid var(--px-panel-border);
+  box-shadow: inset 0 0 0 1px #0a0008;
+}
+
+/* ─── Custom animations ──────────────────────────────────────────── */
+
+@keyframes parallax-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-6px); }
+  80%       { transform: translateX(6px); }
+}
+
+@keyframes damage-flash {
+  0%, 100% { background-color: transparent; }
+  30%       { background-color: rgba(239, 68, 68, 0.4); }
+}
+
+@keyframes float-up {
+  0%   { transform: translateY(0);    opacity: 1; }
+  100% { transform: translateY(-80px); opacity: 0; }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(6px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes pixel-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+@keyframes fade-out-up {
+  0%   { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+@theme inline {
+  --animate-shake:         shake 0.45s ease-in-out;
+  --animate-damage-flash:  damage-flash 0.5s ease-in-out;
+  --animate-float-up:      float-up 1.1s ease-out forwards;
+  --animate-slide-in:      slide-in 0.25s ease-out;
+  --animate-pixel-pulse:   pixel-pulse 1.4s steps(2) infinite;
+  --animate-fade-out-up:   fade-out-up 4s ease-out forwards;
+}
+
+.animate-shake         { animation: var(--animate-shake); }
+.animate-damage-flash  { animation: var(--animate-damage-flash); }
+.animate-float-up      { animation: var(--animate-float-up); }
+.animate-slide-in      { animation: var(--animate-slide-in); }
+.animate-pixel-pulse   { animation: var(--animate-pixel-pulse); }
+.animate-fade-out-up   { animation: var(--animate-fade-out-up); }
