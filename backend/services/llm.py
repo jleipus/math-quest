@@ -126,11 +126,14 @@ class LLMService:
 
         url = (
             f"{settings.gemini_api_base}/models/{settings.gemini_model}:generateContent"
-            f"?key={settings.gemini_api_key}"
         )
 
+        headers = {
+            "X-Goog-Api-Key": settings.gemini_api_key,
+        }
+
         try:
-            response = requests.post(url, json=payload, timeout=25)
+            response = requests.post(url, headers=headers, json=payload, timeout=25)
             response.raise_for_status()
             result = response.json()
 
@@ -141,9 +144,18 @@ class LLMService:
             payload_text = self._extract_json_object(response_text)
             if payload_text:
                 parsed = json.loads(payload_text)
-                if isinstance(parsed, list) and parsed:
-                    parsed = parsed[0]
-                analysis = AnalyseData.model_validate(parsed)
+                # Gemini normally returns a single JSON object, but in some cases
+                # it may return a list of objects. In that case, use the first one.
+                if isinstance(parsed, list):
+                    if not parsed:
+                        return None
+                    parsed_obj = parsed[0]
+                elif isinstance(parsed, dict):
+                    parsed_obj = parsed
+                else:
+                    # Unexpected JSON shape
+                    return None
+                analysis = AnalyseData.model_validate(parsed_obj)
             else:
                 analysis = self._coerce_analysis_from_text(response_text)
 
@@ -170,7 +182,9 @@ class LLMService:
         prompt_feedback = result.get("promptFeedback", {})
         block_reason = prompt_feedback.get("blockReason")
         if block_reason:
-            return f"Request blocked: {block_reason}"
+            # When Gemini blocks the request, treat it as no usable response text
+            # so that the caller can trigger its fallback behavior.
+            return None
         return None
 
     @staticmethod
@@ -192,7 +206,10 @@ class LLMService:
             else "Good progress — continue to the next step."
         )
 
-        confidence = 0.72 if has_issue else 0.58
+        # Fallback confidence values for coerced text analysis:
+        # this path is used when the structured response cannot be parsed,
+        # so we keep the scores conservative and below the primary threshold (0.6).
+        confidence = 0.55 if has_issue else 0.45
         return AnalyseData(
             has_issue=has_issue,
             message=message,
@@ -215,10 +232,35 @@ class LLMService:
             pass
 
         start = stripped.find("{")
-        end = stripped.rfind("}")
-        if start == -1 or end == -1 or end <= start:
+        if start == -1:
             return None
 
+        depth = 0
+        in_string = False
+        escape = False
+        end = -1
+        for i, ch in enumerate(stripped[start:], start=start):
+            if in_string:
+                if escape:
+                    escape = False
+                elif ch == "\\":
+                    escape = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+
+        if end == -1 or end <= start:
+            return None
         candidate = stripped[start : end + 1]
         try:
             json.loads(candidate)

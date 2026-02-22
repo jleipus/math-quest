@@ -33,7 +33,7 @@ API base: `http://127.0.0.1:8000/api/v1`
 
 ## LLM Configuration
 
-By default, assistant analysis uses mock fallback logic.
+By default, assistant analysis uses the Gemini provider with automatic fallback to deterministic mock analysis when Gemini is not configured or a call fails.
 
 ### Gemini API setup
 
