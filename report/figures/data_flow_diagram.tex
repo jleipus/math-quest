@@ -5,22 +5,22 @@
             >={Stealth[length=3mm]},
             actor/.style={
                     ellipse, draw=blue!60, fill=blue!8,
-                    minimum width=2.8cm, minimum height=1cm,
+                    minimum width=3cm, minimum height=1cm,
                     align=center, font=\small
                 },
             process/.style={
                     rectangle, rounded corners=4pt, draw, fill=orange!10,
-                    minimum width=3.5cm, minimum height=1cm,
+                    minimum width=3cm, minimum height=1cm,
                     align=center, font=\small
                 },
             datastore/.style={
                     rectangle, draw, dashed, fill=purple!10, rounded corners=2pt,
-                    minimum width=3.2cm, minimum height=0.9cm,
+                    minimum width=3cm, minimum height=1cm,
                     align=center, font=\small\itshape
                 },
             output/.style={
                     rectangle, rounded corners=4pt, draw=green!50!black, fill=green!8,
-                    minimum width=3.5cm, minimum height=1cm,
+                    minimum width=3cm, minimum height=1cm,
                     align=center, font=\small
                 },
             label/.style={
@@ -29,32 +29,29 @@
             ]
 
             % Actor
-            \node[actor] (student) {Student\\(Aged 10--12)};
+            \node[actor] (learner) {Learner};
 
             % Row 1: Input processing
-            \node[process, below=1.8cm of student] (intent) {Input Analysis /\\Intent Classifier};
+            \node[process, below=of learner] (intent) {Input Analysis};
 
             % Row 2: Two paths
-            \node[process, below left=1.8cm and 2.5cm of intent] (rag) {RAG Retrieval\\Engine};
-            \node[process, below right=1.8cm and 2.5cm of intent] (difficulty) {Difficulty\\Matching};
+            \node[process, below left=and 2.5cm of intent] (rag) {RAG Engine};
+            \node[process, below right=and 2.5cm of intent] (difficulty) {Difficulty\\Matching};
 
             % Row 3: Generation / Reward
-            \node[process, below=1.5cm of rag] (llm) {LLM Generation Layer\\(MiniGuide Constraint)};
-            \node[process, below=1.5cm of difficulty] (reward) {Card Unlock /\\Damage Resolution};
+            \node[process, below=of rag] (llm) {MiniGuide LLM};
+            \node[process, below=of difficulty] (reward) {Card Activation};
 
             % Row 4: Outputs
-            \node[output, below=1.5cm of llm] (question) {Guiding Question};
-            \node[output, below=1.5cm of reward] (gamestate) {Updated Game State};
+            \node[output, below=of llm] (question) {Guiding Question};
+            \node[output, below=of reward] (gamestate) {Updated Game State};
 
             % Data stores
-            \node[datastore, left=2.5cm of rag] (curriculum) {Curriculum \&\\Heuristics KB};
-            \node[datastore, right=2.5cm of difficulty] (cards) {Game Card\\Assets};
-            \node[datastore, below=4cm of intent] (usermodel) {Dynamic User Model\\(ZPD / Mastery State)};
+            \node[datastore, below=of intent] (curriculum) {Curriculum \&\\Heuristics KB};
+            \node[datastore, below=of curriculum] (usermodel) {Dynamic User Model};
 
-            % Arrows: Student to system
-            \draw[->] (student) -- node[label, right] {Submit Answer / Ask for Help} (intent);
-
-            % Intent classifier branching
+            % Arrows
+            \draw[->] (learner) -- node[label, right] {Submit Answer / Ask for Help} (intent);
             \draw[->] (intent) -- node[label, above left] {Needs Help} (rag);
             \draw[->] (intent) -- node[label, above right] {Answer Submitted} (difficulty);
 
@@ -66,17 +63,17 @@
             % Right path: Game
             \draw[->] (difficulty) -- (reward);
             \draw[->] (reward) -- (gamestate);
-            \draw[->] (cards) -- (difficulty);
+            \draw[->] (curriculum) -- (difficulty);
 
-            % Outputs back to student
-            \draw[->] (question.south) -- ++(0,-0.5) -| ([xshift=-2cm]student.south) -- (student.south);
-            \draw[->] (gamestate.south) -- ++(0,-0.5) -| ([xshift=2cm]student.south) -- (student.south);
+            % Outputs back to learner
+            \draw[->] (question.south) -- ++(0,-0.5) -| ([xshift=-7cm]learner.west) -- (learner.west);
+            \draw[->] (gamestate.south) -- ++(0,-0.5) -| ([xshift=7cm]learner.east) -- (learner.east);
 
             % User model connections
-            \draw[->, dashed] (usermodel) -- node[label, left] {ZPD} (llm);
-            \draw[->, dashed] (usermodel) -- node[label, right] {Mastery} (difficulty);
-            \draw[<-, dashed] ([xshift=-5mm]usermodel.north) -- ++(0,0.4) -| node[label, near start, left] {Log Interaction} ([xshift=5mm]question.east) -- (question.east);
-            \draw[<-, dashed] ([xshift=5mm]usermodel.north) -- ++(0,0.4) -| node[label, near start, right] {Update Mastery} ([xshift=-5mm]gamestate.west) -- (gamestate.west);
+            \draw[->, dashed] (usermodel) -- node[label, above] {ZPD} (llm);
+            \draw[->, dashed] (usermodel) -- node[label, above left] {ZPD} (difficulty);
+            \draw[->, dashed] (question.east) -- ++(1.5,0) node[label, above] {Update ZPD} -| ([xshift=-0.75cm]usermodel.south);
+            \draw[->, dashed] (gamestate.west) -- ++(-1.5,0) node[label, above] {Update ZPD} -| ([xshift=0.75cm]usermodel.south);
 
         \end{tikzpicture}
     }
