@@ -4,8 +4,5 @@ Group project for the Responsible Design of Interactive AI Systems course at Ume
 
 ## To Do
 
-- Fix matteboken scraping to chroma db;
-- Implement task generation using RAG;
-- Add user modelling;
-- Inlcude user model in feedback generation;
+- Include RAG context in task generation;
 - Add option to have image in task;

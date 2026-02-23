@@ -10,31 +10,31 @@ from backend.models.game import (
     EndTurnResponse,
     InitGameRequest,
     InitGameResponse,
-    NextFloorRequest,
-    NextFloorResponse,
     PlayCardResponse,
     PlayCardRequest,
 )
 from backend.services.game import game_service
+from backend.services.user_model import user_model_service
 
 router = APIRouter(prefix="/game", tags=["game"])
 
 
 @router.post("/init", response_model=InitGameResponse)
 def init_game(payload: InitGameRequest) -> InitGameResponse:
-    """Create a new game session without dealing cards yet."""
-    data, _ = game_service.init_game(topic=payload.topic)
+    data, _ = game_service.init_game(grade=payload.grade)
     return data
 
 
 @router.post("/draw", response_model=DrawHandResponse)
 def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
-    """Deal a fresh hand of mixed-difficulty cards into an existing session."""
     settings = get_settings()
     session = game_service.get_session(str(payload.session_id))
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return game_service.draw_hand(session, hand_size=settings.default_hand_size)
+    try:
+        return game_service.draw_hand(session, hand_size=settings.default_hand_size)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
 
 @router.post("/answer", response_model=AnswerResponse)
@@ -54,22 +54,21 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
 
     correct = game_service.check_answer(payload.answer, expected)
 
+    user_model_service.get_or_create(str(payload.session_id)).record_attempt(
+        topic=card.task.topic, correct=correct
+    )
+
     if correct:
-        session.unlock_card(str(card.card_id))
         return AnswerResponse(
             correct=True,
             card_id=card.card_id,
-            card_unlocked=True,
-            player_hp=session.player_hp,
-            message="Correct! Card unlocked.",
+            message="Correct!",
         )
 
     return AnswerResponse(
         correct=False,
         card_id=card.card_id,
-        card_unlocked=False,
-        player_hp=session.player_hp,
-        message="Not quite — try again!",
+        message="Not quite - try again!",
     )
 
 
@@ -83,8 +82,6 @@ def play_card(payload: PlayCardRequest) -> PlayCardResponse:
     card = session.get_card(card_id)
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found in this session")
-    if card.locked:
-        raise HTTPException(status_code=400, detail="Card is still locked — solve the task first")
 
     enemy_hp, player_hp = game_service.apply_card(session, card)
     session.remove_card(card_id)
@@ -107,9 +104,13 @@ def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # If enemy hp <= 0, enemy_attack advances the floor and spawns new enemy
     player_hp, raw_damage, absorbed = game_service.enemy_attack(session)
 
-    draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
+    try:
+        draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     return EndTurnResponse(
         player_hp=player_hp,
@@ -117,13 +118,6 @@ def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
         shield_absorbed=absorbed,
         hand=draw_resp.hand,
         enemy_next_damage=draw_resp.enemy_next_damage,
+        enemy_hp=session.enemy_hp,
+        enemy_max_hp=session.enemy_max_hp,
     )
-
-
-@router.post("/next_floor", response_model=NextFloorResponse)
-def next_floor(payload: NextFloorRequest) -> NextFloorResponse:
-    """Advance to the next floor, spawning a stronger enemy."""
-    session = game_service.get_session(str(payload.session_id))
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return game_service.next_floor(session)

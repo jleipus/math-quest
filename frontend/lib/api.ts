@@ -1,7 +1,6 @@
 import type {
   HelpRequest,
   HelpResponse,
-  CurriculumTopic,
   InitGameRequest,
   InitGameResponse,
   DrawHandRequest,
@@ -12,8 +11,6 @@ import type {
   AnswerResponse,
   PlayCardRequest,
   PlayCardResponse,
-  NextFloorRequest,
-  NextFloorResponse,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -26,8 +23,8 @@ export async function requestHelp({
   return post<HelpResponse>("/agent/help", { session_id, task_id, student_work });
 }
 
-export async function initGame({ topic }: InitGameRequest): Promise<InitGameResponse> {
-  return post<InitGameResponse>("/game/init", { topic });
+export async function initGame({ grade }: InitGameRequest): Promise<InitGameResponse> {
+  return post<InitGameResponse>("/game/init", { grade });
 }
 
 export async function drawHand({ session_id }: DrawHandRequest): Promise<DrawHandResponse> {
@@ -53,13 +50,9 @@ export async function endTurn({ session_id }: EndTurnRequest): Promise<EndTurnRe
   return post<EndTurnResponse>("/game/end_turn", { session_id });
 }
 
-export async function nextFloor({ session_id }: NextFloorRequest): Promise<NextFloorResponse> {
-  return post<NextFloorResponse>("/game/next_floor", { session_id });
-}
-
-export async function fetchTopics(): Promise<CurriculumTopic[]> {
-  const data = await get<{ topics: CurriculumTopic[] }>("/curriculum/topics");
-  return data.topics;
+export async function fetchGrades(): Promise<string[]> {
+  const data = await get<{ grades: string[] }>("/curriculum/grades");
+  return data.grades;
 }
 
 // Wrapper function for POST

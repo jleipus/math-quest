@@ -10,11 +10,6 @@ class Settings(BaseSettings):
     app_name: str = "MathQuest API"
     app_version: str = "0.1.0"
 
-    curriculum_source_url: str = "https://www.matteboken.se/lektioner/mellanstadiet/"
-    curriculum_cache_ttl_seconds: int = 60 * 60
-
-    assistant_confidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
-
     llm_provider: str = "mock"
 
     gemini_api_key: str | None = None
@@ -27,10 +22,11 @@ class Settings(BaseSettings):
 
     player_start_hp: int = 100
     enemy_start_hp: int = 100
-    wrong_answer_damage: int = 15
     default_hand_size: int = 5
+    max_energy: int = 3
 
-    chroma_persist_dir: str = "./data/chroma"
+    chroma_db_path: str = "./data/chroma"
+    tiiny_db_path: str = "./data/curriculum_tree.json"
     rag_top_k: int = 3
 
 

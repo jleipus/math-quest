@@ -2,38 +2,41 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CurriculumTopic } from "../lib/types";
-import { fetchTopics, initGame, drawHand } from "../lib/api";
+import { fetchGrades, initGame, drawHand } from "../lib/api";
 import { useGame } from "../lib/gameContext";
 
 export default function StartScreen() {
   const router = useRouter();
   const { initGame: initGameCtx, setHand } = useGame();
 
-  const [topics, setTopics] = useState<CurriculumTopic[]>([]);
-  const [topic, setTopic] = useState("");
+  const [grades, setGrades] = useState<string[]>([]);
+  const [grade, setGrade] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTopics()
-      .then((t) => {
-        setTopics(t);
-        setTopic(t[0]?.id ?? "");
+    fetchGrades()
+      .then((g) => {
+        setGrades(g);
+        setGrade(g[0] ?? "");
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Failed to load topics.");
+        setError(e instanceof Error ? e.message : "Failed to load grades.");
       });
   }, []);
 
   async function handleStart() {
+    if (!grade) return;
+
     setLoading(true);
     setError(null);
     try {
-      const session = await initGame({ topic });
-      initGameCtx(session, topic, session.player_hp);
+      const session = await initGame({ grade });
+      initGameCtx(session, grade, session.player_hp);
+
       const drawResp = await drawHand({ session_id: session.session_id });
       setHand(drawResp.hand, drawResp.enemy_next_damage);
+
       router.push("/game");
     } catch {
       setError("Could not connect to the server. Is the backend running?");
@@ -46,7 +49,9 @@ export default function StartScreen() {
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       {/* Title */}
       <div className="mb-10 text-center">
-        <div className="mb-4 text-7xl" style={{ imageRendering: "pixelated" }}>⚔️</div>
+        <div className="mb-4 text-7xl" style={{ imageRendering: "pixelated" }}>
+          ⚔️
+        </div>
         <h1
           className="font-pixel text-4xl md:text-5xl leading-tight"
           style={{ color: "var(--px-gold)", textShadow: "3px 3px 0 #7a3d00, 6px 6px 0 #1d0a1a" }}
@@ -73,11 +78,11 @@ export default function StartScreen() {
             className="font-pixel mb-3 block text-sm"
             style={{ color: "var(--px-text-dim)", letterSpacing: "0.08em" }}
           >
-            ▶ Select Topic
+            ▶ Select Grade
           </span>
           <select
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
             className="font-pixel w-full px-4 py-3 text-sm"
             style={{
               background: "#1d0a1a",
@@ -87,9 +92,9 @@ export default function StartScreen() {
               boxShadow: "inset 0 0 0 1px #0a0008",
             }}
           >
-            {topics.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            {grades.map((g) => (
+              <option key={g} value={g}>
+                {g}
               </option>
             ))}
           </select>
@@ -120,7 +125,7 @@ export default function StartScreen() {
         {/* Start */}
         <button
           onClick={handleStart}
-          disabled={loading || !topic}
+          disabled={loading || !grade}
           className="px-btn w-full py-4 text-sm"
         >
           {loading ? "Loading…" : "▶  Start Game"}

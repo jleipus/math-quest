@@ -1,13 +1,16 @@
 import base64
-
 import requests
 
 from backend.config import get_settings
+from backend.models.game import Task
 from backend.services.llm.base import (
     MINIGUIDE_SYSTEM_PROMPT,
+    TASK_SYSTEM_PROMPT,
     HelpResponse,
     LLMProvider,
     build_guide_user_text,
+    build_task_user_text,
+    _parse_task,
 )
 
 _CLAUDE_API_BASE = "https://api.anthropic.com/v1"
@@ -15,14 +18,15 @@ _ANTHROPIC_VERSION = "2023-06-01"
 
 
 class ClaudeProvider(LLMProvider):
-    def guide_student(
+    def generate_guidance(
         self,
         question: str,
         context: str,
         image_png: bytes | None,
+        profile_context: str = "",
     ) -> HelpResponse:
         settings = get_settings()
-        user_text = build_guide_user_text(question, context, has_image=bool(image_png))
+        user_text = build_guide_user_text(question, context, has_image=bool(image_png), profile_context=profile_context)
 
         content: list[dict] = []
         if image_png:
@@ -46,12 +50,22 @@ class ClaudeProvider(LLMProvider):
         }
 
         text = self._call(payload, settings)
-        if text:
-            return HelpResponse(
-                guiding_question=text.strip(),
-                context_used=context,
-            )
-        raise RuntimeError("Claude returned no usable text")
+        if not text:
+            raise RuntimeError("Claude returned no usable text")
+        return HelpResponse(guiding_question=text.strip(), context_used=context)
+
+    def generate_task(self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = "") -> Task:
+        settings = get_settings()
+        payload = {
+            "model": settings.claude_model,
+            "max_tokens": 128,
+            "system": TASK_SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": build_task_user_text(grade, topic, difficulty, curriculum_context, profile_context)}],
+        }
+        text = self._call(payload, settings)
+        if not text:
+            raise RuntimeError("Claude returned no usable text for task generation")
+        return _parse_task(text, grade, topic, difficulty)
 
     @staticmethod
     def _call(payload: dict, settings) -> str | None:

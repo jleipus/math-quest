@@ -8,8 +8,7 @@ type Props = {
 
 export default function PlayerHPBar({ hp, maxHp, flash }: Props) {
   const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
-  const barColor =
-    pct > 60 ? "#4caf50" : pct > 30 ? "#f5c842" : "#e05050";
+  const barColor = pct > 60 ? "#4caf50" : pct > 30 ? "#f5c842" : "#e05050";
 
   return (
     <div
@@ -34,10 +33,7 @@ export default function PlayerHPBar({ hp, maxHp, flash }: Props) {
       </div>
 
       {/* Bar track */}
-      <div
-        className="px-bar-track overflow-hidden"
-        style={{ height: 16, width: 240 }}
-      >
+      <div className="px-bar-track overflow-hidden" style={{ height: 16, width: 240 }}>
         <div
           style={{
             height: "100%",

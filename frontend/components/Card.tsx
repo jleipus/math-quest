@@ -4,24 +4,19 @@ import type { Card as CardType, CardType as CardTypeValue, Difficulty } from "..
 
 type Props = {
   card: CardType;
-  /** 1-based index shown as keyboard shortcut hint */
-  index: number;
-  /** Open the task modal (card is locked) */
-  onClickCard: (card: CardType) => void;
-  /** Play the card immediately (card is unlocked) */
-  onPlayCard: (card: CardType) => void;
+  index: number; // 1-based keyboard shortcut hint
+  onClick: (card: CardType) => void;
   playing: boolean;
   affordable: boolean;
   energyCost: number;
 };
 
 const difficultyColor: Record<Difficulty, string> = {
-  easy:   "#4caf50",
+  easy: "#4caf50",
   medium: "#f5c842",
-  hard:   "#e05050",
+  hard: "#e05050",
 };
 
-// Each card type gets a completely distinct visual language
 const cardTypeTheme: Record<
   CardTypeValue,
   {
@@ -33,7 +28,6 @@ const cardTypeTheme: Record<
     powerBg: string;
     powerColor: string;
     glowColor: string;
-    accentBar: string;
   }
 > = {
   attack: {
@@ -45,7 +39,6 @@ const cardTypeTheme: Record<
     powerBg: "#c05030",
     powerColor: "#fff0ee",
     glowColor: "rgba(200,80,50,0.45)",
-    accentBar: "#e05050",
   },
   heal: {
     bg: "#0a1f0e",
@@ -56,7 +49,6 @@ const cardTypeTheme: Record<
     powerBg: "#2a7a40",
     powerColor: "#e0ffe8",
     glowColor: "rgba(60,180,80,0.4)",
-    accentBar: "#4caf50",
   },
   shield: {
     bg: "#0a0e28",
@@ -67,52 +59,29 @@ const cardTypeTheme: Record<
     powerBg: "#2a4090",
     powerColor: "#dde8ff",
     glowColor: "rgba(80,120,220,0.45)",
-    accentBar: "#6080d0",
   },
 };
 
-export default function Card({
-  card,
-  index,
-  onClickCard,
-  onPlayCard,
-  playing,
-  affordable,
-  energyCost,
-}: Props) {
+export default function Card({ card, index, onClick, playing, affordable, energyCost }: Props) {
   const theme = cardTypeTheme[card.card_type] ?? cardTypeTheme.attack;
   const diffColor = difficultyColor[card.task.difficulty];
-  const isLocked = card.locked;
   const isDisabled = playing || !affordable;
-
-  function handleClick() {
-    if (playing) return;
-    if (isLocked) {
-      onClickCard(card);
-    } else if (affordable) {
-      onPlayCard(card);
-    }
-  }
 
   return (
     <button
-      onClick={handleClick}
-      disabled={playing}
-      title={
-        !affordable
-          ? `Need ${energyCost} energy`
-          : isLocked
-          ? "Click to solve and play"
-          : "Click to play"
-      }
+      onClick={() => {
+        if (!isDisabled) onClick(card);
+      }}
+      disabled={isDisabled}
+      title={!affordable ? `Need ${energyCost} energy` : "Click to play"}
       style={{
         width: 172,
         minHeight: 264,
         background: theme.bg,
         border: `3px solid ${theme.border}`,
-        boxShadow: isLocked
-          ? "4px 4px 0 #0a0008"
-          : `4px 4px 0 #0a0008, 0 0 22px ${theme.glowColor}`,
+        boxShadow: affordable
+          ? `4px 4px 0 #0a0008, 0 0 22px ${theme.glowColor}`
+          : "4px 4px 0 #0a0008",
         display: "flex",
         flexDirection: "column",
         padding: 0,
@@ -124,13 +93,14 @@ export default function Card({
         overflow: "hidden",
       }}
       onMouseEnter={(e) => {
-        if (!isDisabled) (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-8px)";
+        if (!isDisabled)
+          (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-8px)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
       }}
     >
-      {/* Coloured header band */}
+      {/* Header band */}
       <div
         style={{
           background: theme.headerBg,
@@ -141,7 +111,6 @@ export default function Card({
           justifyContent: "space-between",
         }}
       >
-        {/* Type icon + label */}
         <div className="flex items-center gap-1">
           <span style={{ fontSize: 14 }}>{theme.icon}</span>
           <span
@@ -166,7 +135,7 @@ export default function Card({
           {index}
         </span>
 
-        {/* Energy cost pip(s) */}
+        {/* Energy cost pips */}
         <div className="flex gap-1 items-center">
           {Array.from({ length: energyCost }).map((_, i) => (
             <div
@@ -184,7 +153,6 @@ export default function Card({
 
       {/* Body */}
       <div style={{ padding: "10px 10px 0", flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Difficulty badge */}
         <div className="mb-2">
           <span
             className="font-pixel"
@@ -199,7 +167,6 @@ export default function Card({
           </span>
         </div>
 
-        {/* Card name */}
         <div
           className="font-pixel mb-2 leading-snug"
           style={{ fontSize: "0.65rem", color: theme.powerColor }}
@@ -207,7 +174,6 @@ export default function Card({
           {card.card_name}
         </div>
 
-        {/* Task question — always visible */}
         <div className="flex-1">
           <p
             className="font-pixel leading-relaxed"
@@ -216,11 +182,9 @@ export default function Card({
             {card.task.question}
           </p>
         </div>
-
-
       </div>
 
-      {/* Bottom accent bar + power badge */}
+      {/* Bottom bar */}
       <div
         style={{
           background: theme.headerBg,
@@ -231,10 +195,7 @@ export default function Card({
           justifyContent: "space-between",
         }}
       >
-        <span
-          className="font-pixel"
-          style={{ fontSize: "0.5rem", color: "var(--px-text-dim)" }}
-        >
+        <span className="font-pixel" style={{ fontSize: "0.5rem", color: "var(--px-text-dim)" }}>
           PWR
         </span>
         <span

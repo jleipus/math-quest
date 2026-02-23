@@ -5,14 +5,15 @@ from pydantic import BaseModel, Field
 
 
 class InitGameRequest(BaseModel):
-    topic: str = Field(min_length=1)
+    grade: str = Field(min_length=1)
 
 
 class InitGameResponse(BaseModel):
     session_id: UUID
     player_hp: int
     enemy_hp: int
-    floor: int = 1
+    max_energy: int
+    floor: int
 
 
 class DrawHandRequest(BaseModel):
@@ -22,6 +23,7 @@ class DrawHandRequest(BaseModel):
 class Task(BaseModel):
     task_id: UUID
     question: str
+    grade: str
     topic: str
     difficulty: str
     expected_answer: str
@@ -35,7 +37,7 @@ class Card(BaseModel):
     card_name: str
     card_power: int
     card_type: CardType
-    locked: bool
+    energy_cost: int
     task: Task
 
 
@@ -53,8 +55,6 @@ class AnswerRequest(BaseModel):
 class AnswerResponse(BaseModel):
     correct: bool
     card_id: UUID
-    card_unlocked: bool
-    player_hp: int
     message: str
 
 
@@ -69,7 +69,6 @@ class PlayCardResponse(BaseModel):
     effect_value: int
     card_type: CardType
     enemy_defeated: bool
-    new_hand: list[Card] | None = None
 
 
 class EndTurnRequest(BaseModel):
@@ -82,14 +81,5 @@ class EndTurnResponse(BaseModel):
     shield_absorbed: int
     hand: list[Card]
     enemy_next_damage: int
-
-
-class NextFloorRequest(BaseModel):
-    session_id: UUID
-
-
-class NextFloorResponse(BaseModel):
-    floor: int
     enemy_hp: int
     enemy_max_hp: int
-    enemy_next_damage: int

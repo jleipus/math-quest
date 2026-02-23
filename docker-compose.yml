@@ -8,9 +8,10 @@ services:
     env_file:
       - .env
     environment:
-      DAIS_CHROMA_PERSIST_DIR: /data/chroma
+      DAIS_CHROMA_DB_PATH: /data/chroma
+      DAIS_TIINY_DB_PATH: /data/curriculum_tree.json
     volumes:
-      - chroma_data:/data/chroma
+      - app_data:/data
     restart: unless-stopped
 
   frontend:
@@ -26,4 +27,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  chroma_data:
+  app_data:

@@ -1,7 +1,7 @@
-"""Mock LLM provider — no network calls, deterministic enough for dev/testing."""
-
 import random
+from uuid import uuid4
 
+from backend.models.game import Task
 from backend.services.llm.base import HelpResponse, LLMProvider
 
 
@@ -9,23 +9,50 @@ class MockProvider(LLMProvider):
     def __init__(self) -> None:
         self._rng = random.Random()
 
-    def guide_student(
+    def generate_guidance(
         self,
         question: str,
         context: str,
         image_png: bytes | None,
+        profile_context: str = "",
     ) -> HelpResponse:
-        guiding_question = (
-            f"What is the first step you would take to solve: {question} — "
-            "can you think about what operation to use?"
-        )
         return HelpResponse(
-            guiding_question=guiding_question,
+            guiding_question=(
+                f"What is the first step you would take to solve: {question} — "
+                "can you think about what operation to use?"
+            ),
             context_used="(mock — no LLM configured)",
         )
 
-    def _mock_confidence(self, question: str, image_png: bytes) -> float:
-        complexity = min(len(question) / 120.0, 0.35)
-        image_signal = min(len(image_png) / 25000.0, 0.45)
-        noise = self._rng.uniform(0.05, 0.2)
-        return round(min(complexity + image_signal + noise, 0.98), 2)
+    def generate_task(self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = "") -> Task:
+        lo, hi = {"easy": (1, 10), "medium": (10, 50)}.get(difficulty, (25, 120))
+        a, b = self._rng.randint(lo, hi), self._rng.randint(lo, hi)
+
+        t = topic.lower()
+        if "subtraktion" in t:
+            a, b = max(a, b), min(a, b)
+            question, answer = f"What is {a} - {b}?", str(a - b)
+        elif "multiplikation" in t:
+            lo, hi = {"easy": (1, 10), "medium": (2, 12)}.get(difficulty, (3, 20))
+            a, b = self._rng.randint(lo, hi), self._rng.randint(lo, hi)
+            question, answer = f"What is {a} x {b}?", str(a * b)
+        elif "division" in t:
+            lo, hi = {"easy": (1, 10), "medium": (2, 12)}.get(difficulty, (3, 20))
+            b = self._rng.randint(lo, hi)
+            result = self._rng.randint(lo, hi)
+            question, answer = f"What is {b * result} ÷ {b}?", str(result)
+        elif "bråk" in t or "decimaltal" in t:
+            denom = {"easy": 4, "medium": 8}.get(difficulty, 12)
+            a, b = self._rng.randint(1, denom - 1), self._rng.randint(1, denom - 1)
+            question, answer = f"What is {a}/{denom} + {b}/{denom}?", f"{a + b}/{denom}"
+        else:
+            question, answer = f"What is {a} + {b}?", str(a + b)
+
+        return Task(
+            task_id=uuid4(),
+            question=question,
+            expected_answer=answer,
+            grade=grade,
+            topic=topic,
+            difficulty=difficulty,
+        )

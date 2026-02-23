@@ -3,15 +3,20 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
-import { playCard, endTurn, nextFloor, drawHand } from "../lib/api";
-import { ENERGY_COST } from "../lib/types";
+import { playCard, endTurn } from "../lib/api";
 import type { Card } from "../lib/types";
 import CardHand from "./CardHand";
 import EnemyDisplay from "./EnemyDisplay";
 import PlayerHPBar from "./PlayerHPBar";
 import TaskModal from "./TaskModal";
 
-type FloatingNumber = { id: number; value: number; x: number; color: string; prefix: string };
+type FloatingNumber = {
+  id: number;
+  value: number;
+  x: number;
+  color: string;
+  prefix: string;
+};
 
 export default function BattleScreen() {
   const router = useRouter();
@@ -24,7 +29,7 @@ export default function BattleScreen() {
     addShield,
     spendEnergy,
     recordDamage,
-    spawnNextFloor,
+    advanceFloor,
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -36,49 +41,45 @@ export default function BattleScreen() {
   const [endingTurn, setEndingTurn] = useState(false);
   const [turnMessage, setTurnMessage] = useState<string | null>(null);
   const [turnMessageKey, setTurnMessageKey] = useState(0);
-  const [outcome, setOutcome] = useState<"victory" | "gameover" | null>(null);
+  const [gameover, setGameover] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [enemyDefeated, setEnemyDefeated] = useState(false);
 
   useEffect(() => {
-    if (outcome === "victory") router.push("/game/victory");
-    if (outcome === "gameover") router.push("/game/gameover");
-  }, [outcome, router]);
+    if (gameover) router.push("/game/gameover");
+  }, [gameover, router]);
 
   useEffect(() => {
     if (!game) router.push("/");
   }, [game, router]);
 
   useEffect(() => {
-    if (game && game.player_hp <= 0) setOutcome("gameover");
+    if (game && game.player_hp <= 0) setGameover(true);
   }, [game?.player_hp]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Don't fire when the task modal is open or typing in an input
       if (selectedCard) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      // Space → end turn
       if (e.code === "Space") {
         e.preventDefault();
         if (!endingTurn) handleEndTurn();
         return;
       }
 
-      // 1–9 → open task modal for that card index (if affordable)
+      // Num keys: open task modal
       const digit = parseInt(e.key, 10);
       if (!isNaN(digit) && digit >= 1 && digit <= 9 && game) {
         const card = game.hand[digit - 1];
-        if (card) {
-          const cost = ENERGY_COST[card.task.difficulty];
-          if (game.energy >= cost) setSelectedCard(card);
+        if (card && game.energy >= card.energy_cost) {
+          e.preventDefault();
+          setSelectedCard(card);
         }
       }
     }
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCard, endingTurn, game?.hand, game?.energy]);
 
   if (!game) return null;
@@ -86,44 +87,42 @@ export default function BattleScreen() {
   function addFloatingNumber(value: number, color: string, prefix: string) {
     const id = floatCounter;
     setFloatCounter((n) => n + 1);
-    setFloatingNums((prev) => [
-      ...prev,
-      { id, value, x: 38 + Math.random() * 24, color, prefix },
-    ]);
-    setTimeout(() => setFloatingNums((prev) => prev.filter((f) => f.id !== id)), 1200);
+    setFloatingNums((prev) => [...prev, { id, value, x: 38 + Math.random() * 24, color, prefix }]);
+    setTimeout(() => setFloatingNums((prev) => prev.filter((f) => f.id !== id)), 2000);
   }
 
   async function handlePlayCard(card: Card) {
     if (!game) return;
-    const cost = ENERGY_COST[card.task.difficulty];
-    if (game.energy < cost) {
-      setError(`Not enough energy! This card costs ${cost} energy (you have ${game.energy}).`);
+
+    if (game.energy < card.energy_cost) {
+      setError(`Not enough energy! This card costs ${card.energy_cost} energy (you have ${game.energy}).`);
       return;
     }
+
     setError(null);
     setPlayingCardId(card.card_id);
     try {
       const result = await playCard({ session_id: game.session_id, card_id: card.card_id });
-      spendEnergy(cost);
+      spendEnergy(card.energy_cost);
 
-      if (result.card_type === "attack") {
-        setEnemyHp(result.enemy_hp);
-        recordDamage(result.effect_value);
-        addFloatingNumber(result.effect_value, "#e05050", "-");
-        setEnemyShake(true);
-        setTimeout(() => setEnemyShake(false), 500);
-        if (result.enemy_defeated) {
-          setEnemyDefeated(true);
-          // Don't spawn new enemy yet — wait for player to end their turn
-        }
-      } else if (result.card_type === "heal") {
-        setPlayerHp(result.player_hp);
-        addFloatingNumber(result.effect_value, "#4caf50", "+");
-        recordDamage(0);
-      } else if (result.card_type === "shield") {
-        addShield(result.effect_value);
-        addFloatingNumber(result.effect_value, "#6080d0", "🛡");
-        recordDamage(0);
+      switch (result.card_type) {
+        case "attack":
+          setEnemyHp(result.enemy_hp);
+          recordDamage(result.effect_value);
+          addFloatingNumber(result.effect_value, "#e05050", "-");
+          setEnemyShake(true);
+          setTimeout(() => setEnemyShake(false), 500);
+          break;
+        case "heal":
+          setPlayerHp(result.player_hp);
+          addFloatingNumber(result.effect_value, "#4caf50", "+");
+          recordDamage(0);
+          break;
+        case "shield":
+          addShield(result.effect_value);
+          addFloatingNumber(result.effect_value, "#6080d0", "🛡");
+          recordDamage(0);
+          break;
       }
 
       removeCard(card.card_id);
@@ -136,22 +135,19 @@ export default function BattleScreen() {
 
   async function handleEndTurn() {
     if (!game) return;
+
     setEndingTurn(true);
     setError(null);
     setTurnMessage(null);
     try {
-      if (enemyDefeated) {
-        // Enemy already dead — advance floor then just draw cards (no enemy attack)
-        const floorResp = await nextFloor({ session_id: game.session_id });
-        spawnNextFloor(floorResp.floor, floorResp.enemy_hp, floorResp.enemy_max_hp, floorResp.enemy_next_damage);
-        setEnemyDefeated(false);
-        const drawResp = await drawHand({ session_id: game.session_id });
-        setHand(drawResp.hand, floorResp.enemy_next_damage);
-        setTurnMessage(`Floor ${floorResp.floor}! A new enemy appears!`);
-        setTurnMessageKey((k) => k + 1);
-        setTimeout(() => setTurnMessage(null), 4000);
+      const result = await endTurn({ session_id: game.session_id });
+
+      const newEnemy = result.enemy_max_hp !== game.enemy_max_hp;
+      if (newEnemy) {
+        advanceFloor(result.enemy_hp, result.enemy_max_hp);
+        setTurnMessage("Enemy defeated! A new enemy appears.");
       } else {
-        const result = await endTurn({ session_id: game.session_id });
+        setEnemyHp(result.enemy_hp, result.enemy_max_hp);
         setPlayerHp(result.player_hp);
         setPlayerFlash(true);
         setTimeout(() => setPlayerFlash(false), 600);
@@ -159,17 +155,17 @@ export default function BattleScreen() {
         const absorbed = result.shield_absorbed;
         const raw = result.enemy_damage;
         const actual = raw - absorbed;
-        const msg =
+        setTurnMessage(
           absorbed > 0
             ? `Enemy dealt ${raw} dmg — shield absorbed ${absorbed}! You took ${actual}.`
-            : `Enemy dealt ${actual} damage!`;
-        setTurnMessage(msg);
-        setTurnMessageKey((k) => k + 1);
-        setTimeout(() => setTurnMessage(null), 4000);
-
-        setHand(result.hand, result.enemy_next_damage);
-        if (result.player_hp <= 0) setOutcome("gameover");
+            : `Enemy dealt ${actual} damage!`,
+        );
       }
+      setTurnMessageKey((k) => k + 1);
+      setTimeout(() => setTurnMessage(null), 4000);
+
+      setHand(result.hand, result.enemy_next_damage);
+      if (result.player_hp <= 0) setGameover(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to end turn.");
     } finally {
@@ -177,7 +173,6 @@ export default function BattleScreen() {
     }
   }
 
-  // Energy pips
   const energyPips = Array.from({ length: game.max_energy }, (_, i) => i < game.energy);
 
   return (
@@ -188,11 +183,8 @@ export default function BattleScreen() {
       {/* Top bar */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex flex-col gap-2">
-          <PlayerHPBar
-            hp={game.player_hp}
-            maxHp={game.player_max_hp}
-            flash={playerFlash}
-          />
+          <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+
           {game.shield > 0 && (
             <div
               className="font-pixel flex items-center gap-2"
@@ -210,6 +202,7 @@ export default function BattleScreen() {
             </div>
           )}
         </div>
+
         <div
           className="font-pixel text-right text-sm"
           style={{
@@ -235,26 +228,28 @@ export default function BattleScreen() {
           nextDamage={game.enemy_next_damage}
         />
 
-        {/* Floating numbers */}
         {floatingNums.map((f) => (
           <div
             key={f.id}
             className="pointer-events-none absolute animate-float-up font-pixel text-xl"
             style={{ left: `${f.x}%`, top: "30%", color: f.color, textShadow: "2px 2px 0 #1d0a1a" }}
           >
-            {f.prefix}{f.value}
+            {f.prefix}
+            {f.value}
           </div>
         ))}
 
-        {/* Turn message — floats over enemy area, auto-fades, fits content width */}
         {turnMessage && (
           <div
             key={turnMessageKey}
             className="pointer-events-none absolute animate-fade-out-up font-pixel text-sm"
             style={{
               bottom: "4%",
-              left: "50%",
-              transform: "translateX(-50%)",
+              left: 0,
+              right: 0,
+              marginLeft: "auto",
+              marginRight: "auto",
+              width: "fit-content",
               whiteSpace: "nowrap",
               background: "rgba(80,40,0,0.88)",
               border: "2px solid var(--px-gold-dim)",
@@ -269,7 +264,6 @@ export default function BattleScreen() {
         )}
       </div>
 
-      {/* Error */}
       {error && (
         <div
           className="font-pixel mb-3 p-4 text-sm"
@@ -286,7 +280,6 @@ export default function BattleScreen() {
 
       {/* End turn + energy row */}
       <div className="mb-3 flex items-center justify-between gap-4">
-        {/* Energy display */}
         <div className="flex items-center gap-3">
           <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
             ENERGY
@@ -310,12 +303,8 @@ export default function BattleScreen() {
           </span>
         </div>
 
-        <button
-          onClick={handleEndTurn}
-          disabled={endingTurn}
-          className="px-btn px-6 py-3 text-sm"
-        >
-          {endingTurn ? "…" : enemyDefeated ? "Next Floor ▶" : "End Turn ↩"}
+        <button onClick={handleEndTurn} disabled={endingTurn} className="px-btn px-6 py-3 text-sm">
+          {endingTurn ? "…" : "End Turn ↩"}
         </button>
       </div>
 
@@ -331,13 +320,11 @@ export default function BattleScreen() {
         <CardHand
           hand={game.hand}
           onClickCard={(card) => setSelectedCard(card)}
-          onPlayCard={handlePlayCard}
           playingCardId={playingCardId}
           energy={game.energy}
         />
       </div>
 
-      {/* Task modal — passes handlePlayCard so it auto-plays on correct answer */}
       {selectedCard && (
         <TaskModal
           card={selectedCard}

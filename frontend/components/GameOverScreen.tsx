@@ -23,7 +23,7 @@ export default function GameOverScreen() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       <div
-        className="flex flex-col items-center gap-8 w-full max-w-lg"
+        className="flex flex-col items-center gap-8 w-full max-w-2xl"
         style={{
           background: "var(--px-panel)",
           border: "3px solid #e05050",
@@ -44,7 +44,10 @@ export default function GameOverScreen() {
           Game Over
         </h1>
 
-        <p className="font-pixel text-center text-xs leading-loose" style={{ color: "var(--px-text-dim)" }}>
+        <p
+          className="font-pixel text-center text-xs leading-loose"
+          style={{ color: "var(--px-text-dim)" }}
+        >
           You ran out of HP.{"\n"}Every hero falls sometimes!
         </p>
 

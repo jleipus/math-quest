@@ -1,11 +1,7 @@
 from backend.config import get_settings
-
 from backend.models.assistant import HelpResponse
-from backend.services.llm.base import (
-    LLMProvider,
-    TaskGenerator,
-    TaskRegistry,
-)
+from backend.models.game import Task
+from backend.services.llm.base import LLMProvider
 
 
 def _build_provider() -> LLMProvider:
@@ -34,24 +30,31 @@ def _build_provider() -> LLMProvider:
     raise ValueError(f"Unknown llm_provider: {settings.llm_provider!r}. Choose mock, gemini, or claude.")
 
 
-class LLMService(TaskGenerator):
-    """
-    Thin facade that combines deterministic task generation (TaskGenerator)
-    with a swappable LLM provider for guide_student and analyse_student_work.
-    """
+class LLMService:
+    """Wrapper for the LLMProvider."""
 
     def __init__(self, provider: LLMProvider) -> None:
-        super().__init__()
         self._provider = provider
 
-    def guide_student(
+    def generate_guidance(
         self,
         question: str,
         context: str,
         image_png: bytes | None = None,
+        profile_context: str = "",
     ) -> HelpResponse:
-        return self._provider.guide_student(question, context, image_png)
+        return self._provider.generate_guidance(question, context, image_png, profile_context)
+
+    def generate_tasks(
+        self,
+        grade: str,
+        topic: str,
+        difficulty: str,
+        count: int,
+        curriculum_context: str = "",
+        profile_context: str = "",
+    ) -> list[Task]:
+        return [self._provider.generate_task(grade, topic, difficulty, curriculum_context, profile_context) for _ in range(count)]
 
 
-task_registry = TaskRegistry()
 llm_service = LLMService(_build_provider())

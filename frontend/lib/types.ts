@@ -21,15 +21,6 @@ export type HelpResponse = {
   context_used: string;
 };
 
-// Curriculum
-
-export type CurriculumTopic = {
-  id: string;
-  name: string;
-  subtopics: string[];
-  grade_level: string;
-};
-
 // Game
 
 export type Difficulty = "easy" | "medium" | "hard";
@@ -37,13 +28,14 @@ export type Difficulty = "easy" | "medium" | "hard";
 export type CardType = "attack" | "heal" | "shield";
 
 export type InitGameRequest = {
-  topic: string;
+  grade: string;
 };
 
 export type InitGameResponse = {
   session_id: string;
   player_hp: number;
   enemy_hp: number;
+  max_energy: number;
   floor: number;
 };
 
@@ -54,6 +46,7 @@ export type DrawHandRequest = {
 export type Task = {
   task_id: string;
   question: string;
+  grade: string;
   topic: string;
   difficulty: Difficulty;
 };
@@ -63,7 +56,7 @@ export type Card = {
   card_name: string;
   card_power: number;
   card_type: CardType;
-  locked: boolean;
+  energy_cost: number;
   task: Task;
 };
 
@@ -82,15 +75,9 @@ export type EndTurnResponse = {
   shield_absorbed: number;
   hand: Card[];
   enemy_next_damage: number;
+  enemy_hp: number;
+  enemy_max_hp: number;
 };
-
-export const ENERGY_COST: Record<Difficulty, number> = {
-  easy: 1,
-  medium: 2,
-  hard: 3,
-};
-
-export const MAX_ENERGY = 3;
 
 export type AnswerRequest = {
   session_id: string;
@@ -101,8 +88,6 @@ export type AnswerRequest = {
 export type AnswerResponse = {
   correct: boolean;
   card_id: string;
-  card_unlocked: boolean;
-  player_hp: number;
   message: string;
 };
 
@@ -117,19 +102,4 @@ export type PlayCardResponse = {
   effect_value: number;
   card_type: CardType;
   enemy_defeated: boolean;
-};
-
-export type AgentMessage = {
-  guiding_question: string;
-};
-
-export type NextFloorRequest = {
-  session_id: string;
-};
-
-export type NextFloorResponse = {
-  floor: number;
-  enemy_hp: number;
-  enemy_max_hp: number;
-  enemy_next_damage: number;
 };

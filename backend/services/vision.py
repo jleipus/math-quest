@@ -1,5 +1,4 @@
 from io import BytesIO
-
 from PIL import Image, ImageDraw
 
 from backend.models.assistant import Stroke

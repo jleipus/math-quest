@@ -1,20 +1,16 @@
 "use client";
 
 import type { Card as CardType } from "../lib/types";
-import { ENERGY_COST } from "../lib/types";
 import Card from "./Card";
 
 type Props = {
   hand: CardType[];
-  /** Called when a locked card is clicked — opens the task modal */
-  onClickCard: (card: CardType) => void;
-  /** Called when an unlocked card is clicked — plays it immediately */
-  onPlayCard: (card: CardType) => void;
+  onClickCard: (card: CardType) => void; // Opens the task modal for any card
   playingCardId: string | null;
   energy: number;
 };
 
-export default function CardHand({ hand, onClickCard, onPlayCard, playingCardId, energy }: Props) {
+export default function CardHand({ hand, onClickCard, playingCardId, energy }: Props) {
   if (hand.length === 0) {
     return (
       <div
@@ -28,22 +24,17 @@ export default function CardHand({ hand, onClickCard, onPlayCard, playingCardId,
 
   return (
     <div className="flex flex-wrap justify-center gap-4 px-2">
-      {hand.map((card, i) => {
-        const cost = ENERGY_COST[card.task.difficulty];
-        const affordable = energy >= cost;
-        return (
-          <Card
-            key={card.card_id}
-            card={card}
-            index={i + 1}
-            onClickCard={affordable ? onClickCard : () => {}}
-            onPlayCard={onPlayCard}
-            playing={playingCardId === card.card_id}
-            affordable={affordable}
-            energyCost={cost}
-          />
-        );
-      })}
+      {hand.map((card, i) => (
+        <Card
+          key={card.card_id}
+          card={card}
+          index={i + 1}
+          onClick={onClickCard}
+          playing={playingCardId === card.card_id}
+          affordable={energy >= card.energy_cost}
+          energyCost={card.energy_cost}
+        />
+      ))}
     </div>
   );
 }

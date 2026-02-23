@@ -1,196 +1,102 @@
-import threading
-import time
+import random
 from typing import Any
 
-import requests
-from bs4 import BeautifulSoup
-
 from backend.config import get_settings
-from backend.models.curriculum import CurriculumTopic
+from backend.models.curriculum import Grade
 
 
 class CurriculumService:
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._cached_topics: list[CurriculumTopic] = []
-        self._cache_time: float = 0.0
-        self._chroma_collection: Any = None
-        self._chroma_ready = False
+    """Provides curriculum data from TinyDB (tree) and ChromaDB (RAG)."""
 
-    def get_topics(self) -> list[CurriculumTopic]:
-        settings = get_settings()
-        now = time.time()
+    def get_grades(self) -> list[str]:
+        """Return grade names from TinyDB.
 
-        with self._lock:
-            if self._cached_topics and (now - self._cache_time) < settings.curriculum_cache_ttl_seconds:
-                return self._cached_topics
+        Returns:
+            List of grade name strings.
 
-        fetched = self._fetch_topics_from_source(settings.curriculum_source_url)
+        Raises:
+            RuntimeError: If the tree database is unavailable or empty.
+        """
+        grades = self._load_tree()
+        if not grades:
+            raise RuntimeError("Curriculum tree database is empty or unavailable. Run index_curriculum first.")
+        return [g.name for g in grades]
 
-        with self._lock:
-            self._cached_topics = fetched
-            self._cache_time = time.time()
-            return self._cached_topics
+    def get_random_topic(self, grade_name: str) -> str:
+        """Return a random topic name for the given grade.
 
-    def retrieve_context(self, topic: str, question: str, top_k: int | None = None) -> str:
+        Args:
+            grade_name: Grade name as stored in TinyDB, e.g. ``"Årskurs 4"``.
+
+        Returns:
+            A randomly chosen topic name from that grade.
+
+        Raises:
+            RuntimeError: If the grade is not found or has no topics.
+        """
+        grades = self._load_tree()
+        grade = next((g for g in grades if g.name == grade_name), None)
+        if not grade or not grade.topics:
+            raise RuntimeError(f"No topics found for grade {grade_name!r}.")
+        return random.choice(grade.topics).name
+
+    def retrieve_context(self, grade: str, topic: str, question: str, top_k: int | None = None) -> str:
+        """Query ChromaDB for lesson text relevant to the grade, topic, and question.
+
+        Args:
+            grade: Grade name for the query.
+            topic: Topic name for the query.
+            question: The student's question or task text.
+            top_k: Number of chunks to retrieve; defaults to ``settings.rag_top_k``.
+
+        Returns:
+            Concatenated relevant lesson text.
+
+        Raises:
+            RuntimeError: If ChromaDB is unavailable or returns no results.
+        """
         settings = get_settings()
         k = top_k if top_k is not None else settings.rag_top_k
 
         collection = self._get_chroma_collection()
         if collection is None:
-            return self._fallback_context(topic)
+            raise RuntimeError("ChromaDB is unavailable. Run index_curriculum first.")
 
+        results = collection.query(query_texts=[f"{grade} {topic}: {question}"], n_results=k)
+        documents = results.get("documents", [[]])[0]
+        if not documents:
+            raise RuntimeError(f"No curriculum context found for {grade!r} / {topic!r}.")
+        return "\n\n".join(documents)
+
+    def _load_tree(self) -> list[Grade]:
+        """Load the curriculum tree from TinyDB.
+
+        Returns:
+            List of ``Grade`` objects, empty list if database is missing.
+        """
         try:
-            query = f"{topic}: {question}"
-            results = collection.query(query_texts=[query], n_results=k)
-            documents = results.get("documents", [[]])[0]
-            if documents:
-                return "\n\n".join(documents)
-        except Exception:
-            pass
+            from tinydb import TinyDB
 
-        return self._fallback_context(topic)
+            settings = get_settings()
+            db = TinyDB(settings.tiiny_db_path)
+            return [Grade.model_validate(row) for row in db.all()]
+        except Exception:
+            return []
 
     def _get_chroma_collection(self) -> Any:
-        if self._chroma_ready:
-            return self._chroma_collection
+        """Open the ChromaDB curriculum collection.
 
-        with self._lock:
-            if self._chroma_ready:
-                return self._chroma_collection
-            self._chroma_collection = self._init_chroma()
-            self._chroma_ready = True
-            return self._chroma_collection
-
-    @staticmethod
-    def _init_chroma() -> Any:
+        Returns:
+            ChromaDB collection, or ``None`` if unavailable.
+        """
         try:
             import chromadb
 
             settings = get_settings()
-            client = chromadb.PersistentClient(path=settings.chroma_persist_dir)
-            collection = client.get_or_create_collection("curriculum")
-            return collection
+            client = chromadb.PersistentClient(path=settings.chroma_db_path)
+            return client.get_or_create_collection("curriculum")
         except Exception:
             return None
-
-    @staticmethod
-    def _fallback_context(topic: str) -> str:
-        fallback_map: dict[str, str] = {
-            "addition": (
-                "Addition means putting numbers together. "
-                "Start with the ones column, then move to tens. "
-                "If the sum in a column is 10 or more, carry the extra to the next column."
-            ),
-            "subtraction": (
-                "Subtraction means taking one number away from another. "
-                "Work column by column from right to left. "
-                "If the top digit is smaller, borrow from the next column."
-            ),
-            "multiplication": (
-                "Multiplication is repeated addition. "
-                "Use times tables to find products quickly. "
-                "For larger numbers, multiply each digit and add the partial products."
-            ),
-            "fractions": (
-                "A fraction has a numerator (top) and denominator (bottom). "
-                "To add fractions with the same denominator, add the numerators and keep the denominator. "
-                "To add fractions with different denominators, first find a common denominator."
-            ),
-        }
-        topic_lower = topic.strip().lower()
-        for key, context in fallback_map.items():
-            if key in topic_lower:
-                return context
-        return (
-            "Mathematics at the mellanstadiet level covers arithmetic, fractions, "
-            "geometry, and basic problem solving. Work step by step."
-        )
-
-    def _fetch_topics_from_source(self, source_url: str) -> list[CurriculumTopic]:
-        # try:
-        #     response = requests.get(source_url, timeout=10)
-        #     response.raise_for_status()
-        #     soup = BeautifulSoup(response.text, "html.parser")
-
-        #     topics = self._extract_topics(soup)
-        #     if topics:
-        #         return topics
-        # except requests.RequestException:
-        #     pass
-
-        return self._fallback_topics()
-
-    def _extract_topics(self, soup: BeautifulSoup) -> list[CurriculumTopic]:
-        candidate_titles: list[str] = []
-
-        for selector in ("h1", "h2", "h3", ".heading", "[class*='title']", "a"):
-            for node in soup.select(selector):
-                text = node.get_text(strip=True)
-                if text and 3 <= len(text) <= 60:
-                    candidate_titles.append(text)
-
-        cleaned = self._dedupe_and_filter(candidate_titles)
-
-        topics: list[CurriculumTopic] = []
-        for index, title in enumerate(cleaned[:20], start=1):
-            topic_id = f"topic-{index}"
-            topics.append(
-                CurriculumTopic(
-                    id=topic_id,
-                    name=title,
-                    subtopics=[f"Practice {title.lower()}", f"Word problems with {title.lower()}"],
-                    grade_level="Mellanstadiet",
-                )
-            )
-        return topics
-
-    @staticmethod
-    def _dedupe_and_filter(items: list[str]) -> list[str]:
-        seen: set[str] = set()
-        filtered: list[str] = []
-
-        for value in items:
-            normalized = " ".join(value.split()).strip()
-            lower = normalized.lower()
-            if lower in seen:
-                continue
-            if any(skip in lower for skip in ["cookie", "integritet", "kontakt", "meny", "logga in"]):
-                continue
-            seen.add(lower)
-            filtered.append(normalized)
-
-        return filtered
-
-    @staticmethod
-    def _fallback_topics() -> list[CurriculumTopic]:
-        fallback: list[dict[str, Any]] = [
-            {
-                "id": "addition",
-                "name": "Addition",
-                "subtopics": ["Adding whole numbers", "Carrying over"],
-                "grade_level": "Year 4-5",
-            },
-            {
-                "id": "subtraction",
-                "name": "Subtraction",
-                "subtopics": ["Subtracting whole numbers", "Borrowing"],
-                "grade_level": "Year 4-5",
-            },
-            {
-                "id": "multiplication",
-                "name": "Multiplication",
-                "subtopics": ["Times tables", "Multi-digit multiplication"],
-                "grade_level": "Year 4-6",
-            },
-            {
-                "id": "fractions",
-                "name": "Fractions",
-                "subtopics": ["Equivalent fractions", "Adding fractions"],
-                "grade_level": "Year 5-6",
-            },
-        ]
-        return [CurriculumTopic.model_validate(item) for item in fallback]
 
 
 curriculum_service = CurriculumService()

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import type { Point, Stroke } from "../lib/types";
 
 export type DrawingCanvasHandle = {
@@ -8,117 +8,84 @@ export type DrawingCanvasHandle = {
   clear: () => void;
 };
 
-type Props = {
-  width?: number;
-  height?: number;
-};
-
-const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  _props,
-  ref,
-) {
+const DrawingCanvas = forwardRef<DrawingCanvasHandle, object>(function DrawingCanvas(_, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const isDrawingRef = useRef(false);
-  const currentStrokeRef = useRef<Point[]>([]);
+  const drawing = useRef(false);
+  const currentStroke = useRef<Point[]>([]);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
 
-  // Keep canvas buffer size = rendered size so mouse coords always line up
+  // Keep canvas resolution in sync with its CSS size.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const syncSize = () => {
+    const ro = new ResizeObserver(() => {
       const { width, height } = canvas.getBoundingClientRect();
-      if (canvas.width !== Math.round(width) || canvas.height !== Math.round(height)) {
-        canvas.width = Math.round(width);
-        canvas.height = Math.round(height);
-        // Re-apply context settings after resize (context state is reset)
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.lineWidth = 3;
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.strokeStyle = "#1e293b";
-          ctxRef.current = ctx;
-        }
+      canvas.width = Math.round(width);
+      canvas.height = Math.round(height);
+
+      // Context settings are reset on resize — reapply.
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.lineWidth = 3;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#1e293b";
       }
-    };
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1e293b";
-    ctxRef.current = ctx;
-
-    syncSize();
-    const ro = new ResizeObserver(syncSize);
+    });
     ro.observe(canvas);
     return () => ro.disconnect();
   }, []);
 
-  // Mouse position relative to canvas buffer (accounts for CSS scaling)
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement>): Point => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
-  };
+  function getPos(e: React.MouseEvent<HTMLCanvasElement>): Point {
+    const r = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
 
-  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    isDrawingRef.current = true;
-    const pos = getPos(e);
-    currentStrokeRef.current = [pos];
-    const ctx = ctxRef.current;
-    if (!ctx) return;
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-  };
+  function onMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    drawing.current = true;
+    const p = getPos(e);
+    currentStroke.current = [p];
+    const ctx = canvasRef.current?.getContext("2d");
+    ctx?.beginPath();
+    ctx?.moveTo(p.x, p.y);
+  }
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current || !ctxRef.current) return;
-    const pos = getPos(e);
-    currentStrokeRef.current.push(pos);
-    ctxRef.current.lineTo(pos.x, pos.y);
-    ctxRef.current.stroke();
-  };
+  function onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return;
+    const p = getPos(e);
+    currentStroke.current.push(p);
+    const ctx = canvasRef.current?.getContext("2d");
+    ctx?.lineTo(p.x, p.y);
+    ctx?.stroke();
+  }
 
-  const endDraw = () => {
-    if (!isDrawingRef.current) return;
-    isDrawingRef.current = false;
-    const pts = currentStrokeRef.current;
-    if (pts.length > 1) {
-      setStrokes((prev) => [...prev, { points: [...pts], timestamp_ms: Date.now() }]);
-    }
-    currentStrokeRef.current = [];
-  };
+  function onMouseUp() {
+    if (!drawing.current) return;
+    drawing.current = false;
+    const pts = currentStroke.current;
+    if (pts.length > 1) setStrokes((s) => [...s, { points: [...pts], timestamp_ms: Date.now() }]);
+    currentStroke.current = [];
+  }
 
   const clear = useCallback(() => {
     const canvas = canvasRef.current;
-    const ctx = ctxRef.current;
-    if (!canvas || !ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (canvas) canvas.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
     setStrokes([]);
-    currentStrokeRef.current = [];
+    currentStroke.current = [];
   }, []);
 
   useImperativeHandle(ref, () => ({ getStrokes: () => strokes, clear }), [strokes, clear]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%", background: "#f5f0f8", overflow: "hidden" }}>
+    <div style={{ position: "relative", width: "100%", height: "100%", background: "#f5f0f8" }}>
       <canvas
         ref={canvasRef}
-        style={{ display: "block", cursor: "crosshair", width: "100%", height: "100%" }}
-        onMouseDown={startDraw}
-        onMouseMove={draw}
-        onMouseUp={endDraw}
-        onMouseLeave={endDraw}
+        style={{ display: "block", width: "100%", height: "100%", cursor: "crosshair" }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
       />
       <button
         type="button"

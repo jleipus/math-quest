@@ -8,11 +8,11 @@ type Props = {
 };
 
 export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
-  const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+  const health_pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Incoming attack warning — static, no pulse */}
+      {/* Incoming attack warning */}
       {nextDamage > 0 && (
         <div
           className="font-pixel text-center text-sm"
@@ -54,7 +54,7 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
         ENEMY
       </div>
 
-      {/* HP numbers + bar on a dark backing so they're always readable */}
+      {/* HP numbers */}
       <div
         style={{
           background: "rgba(10,0,8,0.75)",
@@ -68,7 +68,10 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
           width: 200,
         }}
       >
-        <div className="font-pixel text-base" style={{ color: "#ff9090", textShadow: "2px 2px 0 #0a0008" }}>
+        <div
+          className="font-pixel text-base"
+          style={{ color: "#ff9090", textShadow: "2px 2px 0 #0a0008" }}
+        >
           {hp}
           <span style={{ color: "#884444", fontSize: "0.75rem" }}>/{maxHp}</span>
         </div>
@@ -76,7 +79,7 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
           <div
             style={{
               height: "100%",
-              width: `${pct}%`,
+              width: `${health_pct}%`,
               background: "#e05050",
               transition: "width 0.4s steps(8)",
               imageRendering: "pixelated",
