@@ -4,4 +4,8 @@ Group project for the Responsible Design of Interactive AI Systems course at Ume
 
 ## To Do
 
-- Automate TypeScript API type generation from pydantic types
+- Fix matteboken scraping to chroma db;
+- Implement task generation using RAG;
+- Add user modelling;
+- Inlcude user model in feedback generation;
+- Add option to have image in task;
