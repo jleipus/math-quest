@@ -35,18 +35,17 @@ API base: `http://127.0.0.1:8000/api/v1`
 
 Assistant analysis requires a configured Gemini provider.
 
+`backend/config.py` is the single source of truth for configuration.
+
 ### Gemini API setup
 
-To use Google Gemini API:
+Set these values in `backend/config.py`:
 
-```env
-DAIS_LLM_PROVIDER=gemini
-DAIS_GEMINI_API_KEY=your_gemini_api_key
-DAIS_GEMINI_MODEL=gemini-2.0-flash
-DAIS_GEMINI_API_BASE=https://generativelanguage.googleapis.com/v1beta
-DAIS_GEMINI_TEMPERATURE=0.2
-DAIS_ASSISTANT_CONFIDENCE_THRESHOLD=0.6
-```
+- `llm_provider = "gemini"`
+- `gemini_api_key = "your_gemini_api_key"`
+- `assistant_confidence_threshold = 0.4`
+
+`gemini_api_key` has no default value. The app fails to start until it is set.
 
 If the Gemini key is missing or the Gemini call fails, `/assistant/analyse` returns an error.
 
