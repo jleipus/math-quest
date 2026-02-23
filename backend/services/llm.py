@@ -58,40 +58,27 @@ class LLMService:
     def analyse_student_work(self, question: str, image_png: bytes) -> AnalyseData:
         settings = get_settings()
 
-        if settings.llm_provider == "gemini":
-            llm_result = self._analyse_with_gemini(question=question, image_png=image_png)
-            if llm_result is not None:
-                if llm_result.confidence < settings.assistant_confidence_threshold:
-                    return AnalyseData(
-                        has_issue=False,
-                        message="",
-                        suggestion="",
-                        confidence=llm_result.confidence,
-                    )
-                return llm_result
+        if settings.llm_provider != "gemini":
+            raise RuntimeError(f"Unsupported LLM provider: {settings.llm_provider}")
 
-        confidence = self._mock_confidence(question, image_png)
-        has_issue = confidence >= settings.assistant_confidence_threshold
+        llm_result = self._analyse_with_gemini(question=question, image_png=image_png)
+        if llm_result is None:
+            raise RuntimeError("Gemini analysis failed")
 
-        if not has_issue:
+        if llm_result.confidence < settings.assistant_confidence_threshold:
             return AnalyseData(
                 has_issue=False,
                 message="",
                 suggestion="",
-                confidence=confidence,
+                confidence=llm_result.confidence,
             )
 
-        return AnalyseData(
-            has_issue=True,
-            message="Looks like there might be a mismatch with the required operation for this step.",
-            suggestion="Check the operation sign in the question and try that step again.",
-            confidence=confidence,
-        )
+        return llm_result
 
     def _analyse_with_gemini(self, question: str, image_png: bytes) -> AnalyseData | None:
         settings = get_settings()
         if not settings.gemini_api_key:
-            return None
+            raise RuntimeError("Missing Gemini API key")
 
         image_b64 = base64.b64encode(image_png).decode("utf-8")
 
@@ -267,13 +254,6 @@ class LLMService:
             return candidate
         except json.JSONDecodeError:
             return None
-
-    def _mock_confidence(self, question: str, image_png: bytes) -> float:
-        complexity = min(len(question) / 120.0, 0.35)
-        image_signal = min(len(image_png) / 25000.0, 0.45)
-        noise = self._rng.uniform(0.05, 0.2)
-        score = min(complexity + image_signal + noise, 0.98)
-        return round(score, 2)
 
     def _difficulty_range(self, difficulty: str) -> tuple[int, int]:
         if difficulty == "easy":

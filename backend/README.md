@@ -33,7 +33,7 @@ API base: `http://127.0.0.1:8000/api/v1`
 
 ## LLM Configuration
 
-By default, assistant analysis uses the Gemini provider with automatic fallback to deterministic mock analysis when Gemini is not configured or a call fails.
+Assistant analysis requires a configured Gemini provider.
 
 ### Gemini API setup
 
@@ -48,7 +48,7 @@ DAIS_GEMINI_TEMPERATURE=0.2
 DAIS_ASSISTANT_CONFIDENCE_THRESHOLD=0.6
 ```
 
-If the Gemini call fails (or key is missing), the service automatically falls back to deterministic mock analysis.
+If the Gemini key is missing or the Gemini call fails, `/assistant/analyse` returns an error.
 
 ## API Examples (PowerShell)
 

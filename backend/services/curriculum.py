@@ -1,6 +1,5 @@
 import threading
 import time
-from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
@@ -39,10 +38,9 @@ class CurriculumService:
             topics = self._extract_topics(soup)
             if topics:
                 return topics
-        except requests.RequestException:
-            pass
-
-        return self._fallback_topics()
+            raise RuntimeError("No curriculum topics could be extracted from source")
+        except requests.RequestException as exc:
+            raise RuntimeError("Failed to fetch curriculum topics from source") from exc
 
     def _extract_topics(self, soup: BeautifulSoup) -> list[CurriculumTopic]:
         candidate_titles: list[str] = []
@@ -84,36 +82,5 @@ class CurriculumService:
             filtered.append(normalized)
 
         return filtered
-
-    @staticmethod
-    def _fallback_topics() -> list[CurriculumTopic]:
-        fallback: list[dict[str, Any]] = [
-            {
-                "id": "addition",
-                "name": "Addition",
-                "subtopics": ["Adding whole numbers", "Carrying over"],
-                "grade_level": "Year 4-5",
-            },
-            {
-                "id": "subtraction",
-                "name": "Subtraction",
-                "subtopics": ["Subtracting whole numbers", "Borrowing"],
-                "grade_level": "Year 4-5",
-            },
-            {
-                "id": "multiplication",
-                "name": "Multiplication",
-                "subtopics": ["Times tables", "Multi-digit multiplication"],
-                "grade_level": "Year 4-6",
-            },
-            {
-                "id": "fractions",
-                "name": "Fractions",
-                "subtopics": ["Equivalent fractions", "Adding fractions"],
-                "grade_level": "Year 5-6",
-            },
-        ]
-        return [CurriculumTopic.model_validate(item) for item in fallback]
-
 
 curriculum_service = CurriculumService()

@@ -1,11 +1,16 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="DAIS_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="DAIS_",
+        env_file=str(Path(__file__).resolve().parent / ".env"),
+        extra="ignore",
+    )
 
     app_name: str = "DAIS Active Learning API"
     app_version: str = "0.1.0"
