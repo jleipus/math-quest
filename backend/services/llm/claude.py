@@ -3,15 +3,11 @@ import base64
 import requests
 
 from backend.config import get_settings
-from backend.models.assistant import AnalysisResponse
 from backend.services.llm.base import (
-    ANALYSE_SYSTEM_PROMPT,
     MINIGUIDE_SYSTEM_PROMPT,
     HelpResponse,
     LLMProvider,
-    build_analyse_user_text,
     build_guide_user_text,
-    parse_analyse_response,
 )
 
 _CLAUDE_API_BASE = "https://api.anthropic.com/v1"
@@ -56,36 +52,6 @@ class ClaudeProvider(LLMProvider):
                 context_used=context,
             )
         raise RuntimeError("Claude returned no usable text")
-
-    def analyse_student_work(self, question: str, image_png: bytes) -> AnalysisResponse:
-        settings = get_settings()
-        user_text = build_analyse_user_text(question)
-
-        content: list[dict] = [
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/png",
-                    "data": base64.b64encode(image_png).decode(),
-                },
-            },
-            {"type": "text", "text": user_text},
-        ]
-
-        payload = {
-            "model": settings.claude_model,
-            "max_tokens": 512,
-            "system": ANALYSE_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": content}],
-        }
-
-        text = self._call(payload, settings)
-        if text:
-            result = parse_analyse_response(text)
-            if result:
-                return result
-        raise RuntimeError("Claude returned no usable analysis")
 
     @staticmethod
     def _call(payload: dict, settings) -> str | None:

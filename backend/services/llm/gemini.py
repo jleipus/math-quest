@@ -3,15 +3,11 @@ import base64
 import requests
 
 from backend.config import get_settings
-from backend.models.assistant import AnalysisResponse
 from backend.services.llm.base import (
-    ANALYSE_SYSTEM_PROMPT,
     MINIGUIDE_SYSTEM_PROMPT,
     HelpResponse,
     LLMProvider,
-    build_analyse_user_text,
     build_guide_user_text,
-    parse_analyse_response,
 )
 
 
@@ -52,37 +48,6 @@ class GeminiProvider(LLMProvider):
                 context_used=context,
             )
         raise RuntimeError("Gemini returned no usable text")
-
-    def analyse_student_work(self, question: str, image_png: bytes) -> AnalysisResponse:
-        settings = get_settings()
-        user_text = f"{ANALYSE_SYSTEM_PROMPT}\n\n{build_analyse_user_text(question)}"
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": user_text},
-                        {
-                            "inline_data": {
-                                "mime_type": "image/png",
-                                "data": base64.b64encode(image_png).decode(),
-                            }
-                        },
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": settings.gemini_temperature,
-                "responseMimeType": "application/json",
-            },
-        }
-
-        text = self._call(payload, settings)
-        if text:
-            result = parse_analyse_response(text)
-            if result:
-                return result
-        raise RuntimeError("Gemini returned no usable analysis")
 
     @staticmethod
     def _call(payload: dict, settings) -> str | None:

@@ -20,10 +20,6 @@ from backend.services.game import game_service
 router = APIRouter(prefix="/game", tags=["game"])
 
 
-# ---------------------------------------------------------------------------
-# New two-step flow
-# ---------------------------------------------------------------------------
-
 @router.post("/init", response_model=InitGameResponse)
 def init_game(payload: InitGameRequest) -> InitGameResponse:
     """Create a new game session without dealing cards yet."""
@@ -40,10 +36,6 @@ def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
         raise HTTPException(status_code=404, detail="Session not found")
     return game_service.draw_hand(session, hand_size=settings.default_hand_size)
 
-
-# ---------------------------------------------------------------------------
-# Answer a task
-# ---------------------------------------------------------------------------
 
 @router.post("/answer", response_model=AnswerResponse)
 def answer_task(payload: AnswerRequest) -> AnswerResponse:
@@ -72,7 +64,6 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
             message="Correct! Card unlocked.",
         )
 
-    # No penalty for wrong answers — just inform the player
     return AnswerResponse(
         correct=False,
         card_id=card.card_id,
@@ -81,10 +72,6 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
         message="Not quite — try again!",
     )
 
-
-# ---------------------------------------------------------------------------
-# Play a card (one per turn)
-# ---------------------------------------------------------------------------
 
 @router.post("/play_card", response_model=PlayCardResponse)
 def play_card(payload: PlayCardRequest) -> PlayCardResponse:
@@ -113,10 +100,6 @@ def play_card(payload: PlayCardRequest) -> PlayCardResponse:
     )
 
 
-# ---------------------------------------------------------------------------
-# End of turn — enemy attacks, then a new hand is drawn
-# ---------------------------------------------------------------------------
-
 @router.post("/end_turn", response_model=EndTurnResponse)
 def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
     settings = get_settings()
@@ -124,10 +107,8 @@ def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Enemy attacks
     player_hp, raw_damage, absorbed = game_service.enemy_attack(session)
 
-    # Draw a fresh hand for the next turn
     draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
 
     return EndTurnResponse(
@@ -138,10 +119,6 @@ def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
         enemy_next_damage=draw_resp.enemy_next_damage,
     )
 
-
-# ---------------------------------------------------------------------------
-# Next floor — called after enemy is defeated
-# ---------------------------------------------------------------------------
 
 @router.post("/next_floor", response_model=NextFloorResponse)
 def next_floor(payload: NextFloorRequest) -> NextFloorResponse:

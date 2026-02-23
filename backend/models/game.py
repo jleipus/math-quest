@@ -4,11 +4,6 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-# ---------------------------------------------------------------------------
-# Session initialisation (no cards yet)
-# ---------------------------------------------------------------------------
-
-
 class InitGameRequest(BaseModel):
     topic: str = Field(min_length=1)
 
@@ -18,11 +13,6 @@ class InitGameResponse(BaseModel):
     player_hp: int
     enemy_hp: int
     floor: int = 1
-
-
-# ---------------------------------------------------------------------------
-# Drawing a hand of cards
-# ---------------------------------------------------------------------------
 
 
 class DrawHandRequest(BaseModel):
@@ -41,8 +31,6 @@ CardType = Literal["attack", "heal", "shield"]
 
 
 class Card(BaseModel):
-    """Contains game parameters and locking task."""
-
     card_id: UUID
     card_name: str
     card_power: int
@@ -54,11 +42,6 @@ class Card(BaseModel):
 class DrawHandResponse(BaseModel):
     hand: list[Card]
     enemy_next_damage: int
-
-
-# ---------------------------------------------------------------------------
-# Answering a task
-# ---------------------------------------------------------------------------
 
 
 class AnswerRequest(BaseModel):
@@ -75,11 +58,6 @@ class AnswerResponse(BaseModel):
     message: str
 
 
-# ---------------------------------------------------------------------------
-# Playing a card
-# ---------------------------------------------------------------------------
-
-
 class PlayCardRequest(BaseModel):
     session_id: UUID
     card_id: UUID
@@ -94,11 +72,6 @@ class PlayCardResponse(BaseModel):
     new_hand: list[Card] | None = None
 
 
-# ---------------------------------------------------------------------------
-# End of turn — enemy attacks
-# ---------------------------------------------------------------------------
-
-
 class EndTurnRequest(BaseModel):
     session_id: UUID
 
@@ -109,11 +82,6 @@ class EndTurnResponse(BaseModel):
     shield_absorbed: int
     hand: list[Card]
     enemy_next_damage: int
-
-
-# ---------------------------------------------------------------------------
-# Next floor — spawn a new enemy after the current one is defeated
-# ---------------------------------------------------------------------------
 
 
 class NextFloorRequest(BaseModel):

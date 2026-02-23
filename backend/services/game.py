@@ -46,17 +46,6 @@ _POWER_BY_DIFFICULTY: dict[str, tuple[int, int]] = {
     "hard": (21, 35),
 }
 
-# Probability weights for card types: [attack, heal, shield]
-_TYPE_WEIGHTS = [0.55, 0.25, 0.20]
-_CARD_TYPES: list[CardType] = ["attack", "heal", "shield"]
-
-# Enemy base damage per turn (reduced by shield)
-_ENEMY_DAMAGE_BY_DIFFICULTY = {
-    "easy": (5, 10),
-    "medium": (10, 18),
-    "hard": (15, 25),
-}
-
 
 class GameSession:
     def __init__(
@@ -78,10 +67,6 @@ class GameSession:
         self._task_to_card: dict[str, str] = {}
         self._expected_answers: dict[str, str] = {}
 
-    # ------------------------------------------------------------------
-    # Hand management
-    # ------------------------------------------------------------------
-
     def set_hand(self, hand: list[Card]) -> None:
         self.hand = hand
         self._rebuild_task_map()
@@ -89,19 +74,11 @@ class GameSession:
     def _rebuild_task_map(self) -> None:
         self._task_to_card = {str(card.task.task_id): str(card.card_id) for card in self.hand}
 
-    # ------------------------------------------------------------------
-    # Answer tracking
-    # ------------------------------------------------------------------
-
     def register_answer(self, task_id: str, expected_answer: str) -> None:
         self._expected_answers[task_id] = expected_answer
 
     def get_expected_answer(self, task_id: str) -> str | None:
         return self._expected_answers.get(task_id)
-
-    # ------------------------------------------------------------------
-    # Card queries / mutations
-    # ------------------------------------------------------------------
 
     def get_card_for_task(self, task_id: str) -> Card | None:
         card_id = self._task_to_card.get(task_id)
@@ -128,10 +105,6 @@ class GameService:
         self._lock = Lock()
         self._sessions: dict[str, GameSession] = {}
         self._rng = random.Random()
-
-    # ------------------------------------------------------------------
-    # Session lifecycle
-    # ------------------------------------------------------------------
 
     def init_game(self, topic: str) -> tuple[InitGameResponse, GameSession]:
         settings = get_settings()
@@ -161,10 +134,6 @@ class GameService:
         with self._lock:
             return self._sessions.get(session_id)
 
-    # ------------------------------------------------------------------
-    # Hand drawing
-    # ------------------------------------------------------------------
-
     def draw_hand(self, session: GameSession, hand_size: int) -> DrawHandResponse:
         hand, expected_answers = self._generate_hand(session.topic, hand_size)
         session.set_hand(hand)
@@ -175,9 +144,7 @@ class GameService:
             session.enemy_next_damage = self._rng.randint(10, 20)
         return DrawHandResponse(hand=hand, enemy_next_damage=session.enemy_next_damage)
 
-    def _generate_hand(
-        self, topic: str, hand_size: int
-    ) -> tuple[list[Card], dict[str, str]]:
+    def _generate_hand(self, topic: str, hand_size: int) -> tuple[list[Card], dict[str, str]]:
         from backend.services.llm import llm_service, task_registry
 
         # Generate tasks with mixed difficulties
@@ -198,9 +165,7 @@ class GameService:
         # remaining slots filled with attack or shield only (max 1 heal per hand).
         guaranteed: list[CardType] = ["attack", "heal", "shield"]
         extra_count = len(all_tasks) - len(guaranteed)
-        extra_types: list[CardType] = self._rng.choices(
-            ["attack", "shield"], k=max(0, extra_count)
-        )
+        extra_types: list[CardType] = self._rng.choices(["attack", "shield"], k=max(0, extra_count))
         card_types: list[CardType] = guaranteed + extra_types
         self._rng.shuffle(card_types)
 
@@ -241,10 +206,6 @@ class GameService:
             counts[_DIFFICULTIES[i % len(_DIFFICULTIES)]] += 1
         return counts
 
-    # ------------------------------------------------------------------
-    # End of turn — enemy attacks
-    # ------------------------------------------------------------------
-
     def enemy_attack(self, session: GameSession) -> tuple[int, int, int]:
         """
         Resolve enemy attack for the current turn using the pre-rolled damage.
@@ -262,10 +223,6 @@ class GameService:
         # Pre-roll next turn's damage
         session.enemy_next_damage = self._rng.randint(10, 20)
         return session.player_hp, raw_damage, absorbed
-
-    # ------------------------------------------------------------------
-    # Next floor — spawn a tougher enemy
-    # ------------------------------------------------------------------
 
     def next_floor(self, session: GameSession) -> NextFloorResponse:
         """
@@ -290,13 +247,7 @@ class GameService:
             enemy_next_damage=session.enemy_next_damage,
         )
 
-    # ------------------------------------------------------------------
-    # Card effects
-    # ------------------------------------------------------------------
-
-    def apply_card(
-        self, session: GameSession, card: Card
-    ) -> tuple[int, int]:
+    def apply_card(self, session: GameSession, card: Card) -> tuple[int, int]:
         """
         Apply a card's effect.
 
@@ -311,10 +262,6 @@ class GameService:
             session.shield += card.card_power
 
         return session.enemy_hp, session.player_hp
-
-    # ------------------------------------------------------------------
-    # Answer checking
-    # ------------------------------------------------------------------
 
     @staticmethod
     def check_answer(submitted: str, expected: str) -> bool:

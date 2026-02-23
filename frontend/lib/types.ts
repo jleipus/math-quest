@@ -36,7 +36,6 @@ export type Difficulty = "easy" | "medium" | "hard";
 
 export type CardType = "attack" | "heal" | "shield";
 
-// New two-step flow
 export type InitGameRequest = {
   topic: string;
 };
@@ -85,7 +84,6 @@ export type EndTurnResponse = {
   enemy_next_damage: number;
 };
 
-/** Energy cost per card difficulty */
 export const ENERGY_COST: Record<Difficulty, number> = {
   easy: 1,
   medium: 2,

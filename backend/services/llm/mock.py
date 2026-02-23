@@ -2,8 +2,6 @@
 
 import random
 
-from backend.models.assistant import AnalysisResponse
-from backend.config import get_settings
 from backend.services.llm.base import HelpResponse, LLMProvider
 
 
@@ -24,21 +22,6 @@ class MockProvider(LLMProvider):
         return HelpResponse(
             guiding_question=guiding_question,
             context_used="(mock — no LLM configured)",
-        )
-
-    def analyse_student_work(self, question: str, image_png: bytes) -> AnalysisResponse:
-        settings = get_settings()
-        confidence = self._mock_confidence(question, image_png)
-        has_issue = confidence >= settings.assistant_confidence_threshold
-
-        if not has_issue:
-            return AnalysisResponse(has_issue=False, message="", suggestion="", confidence=confidence)
-
-        return AnalysisResponse(
-            has_issue=True,
-            message="Looks like there might be a mismatch with the required operation for this step.",
-            suggestion="Check the operation sign in the question and try that step again.",
-            confidence=confidence,
         )
 
     def _mock_confidence(self, question: str, image_png: bytes) -> float:

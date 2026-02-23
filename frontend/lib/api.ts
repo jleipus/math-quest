@@ -26,12 +26,10 @@ export async function requestHelp({
   return post<HelpResponse>("/agent/help", { session_id, task_id, student_work });
 }
 
-/** Step 1: Create a session (no cards yet). */
 export async function initGame({ topic }: InitGameRequest): Promise<InitGameResponse> {
   return post<InitGameResponse>("/game/init", { topic });
 }
 
-/** Step 2: Draw a hand of mixed-difficulty cards. */
 export async function drawHand({ session_id }: DrawHandRequest): Promise<DrawHandResponse> {
   return post<DrawHandResponse>("/game/draw", { session_id });
 }
@@ -51,12 +49,10 @@ export async function playCard({
   return post<PlayCardResponse>("/game/play_card", { session_id, card_id });
 }
 
-/** End turn: enemy attacks, then fresh hand is dealt. */
 export async function endTurn({ session_id }: EndTurnRequest): Promise<EndTurnResponse> {
   return post<EndTurnResponse>("/game/end_turn", { session_id });
 }
 
-/** Advance to the next floor after defeating the current enemy. */
 export async function nextFloor({ session_id }: NextFloorRequest): Promise<NextFloorResponse> {
   return post<NextFloorResponse>("/game/next_floor", { session_id });
 }

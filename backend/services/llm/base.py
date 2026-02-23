@@ -1,11 +1,10 @@
-import json
 import random
 from abc import ABC, abstractmethod
 from threading import Lock
 from uuid import uuid4
 
 from backend.models.game import Task
-from backend.models.assistant import HelpResponse, AnalysisResponse
+from backend.models.assistant import HelpResponse
 
 
 MINIGUIDE_SYSTEM_PROMPT = (
@@ -20,24 +19,12 @@ MINIGUIDE_SYSTEM_PROMPT = (
     "Respond with only the guiding question. No preamble, no explanation."
 )
 
-ANALYSE_SYSTEM_PROMPT = (
-    "You are a kid-friendly math handwriting assistant. "
-    "Analyze the student's in-progress math work image for likely mistakes. "
-    "Return ONLY valid JSON with keys: has_issue (boolean), message (string), "
-    "suggestion (string), confidence (number between 0 and 1). "
-    "Use concise, child-friendly language."
-)
-
 
 def build_guide_user_text(question: str, context: str, has_image: bool) -> str:
     text = f"Curriculum context:\n{context}\n\nMath task the student is working on:\n{question}\n\n"
     if has_image:
         text += "The student has submitted handwritten work (see image). Please consider it."
     return text
-
-
-def build_analyse_user_text(question: str) -> str:
-    return f"Task question: {question}"
 
 
 class TaskRegistry:
@@ -53,108 +40,6 @@ class TaskRegistry:
     def get(self, task_id: str) -> Task | None:
         with self._lock:
             return self._tasks.get(task_id)
-
-
-def extract_json_object(text: str) -> str | None:
-    """Extract the first JSON object from a string, stripping markdown fences."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.strip("`")
-        if stripped.startswith("json"):
-            stripped = stripped[4:].strip()
-
-    try:
-        json.loads(stripped)
-        return stripped
-    except json.JSONDecodeError:
-        pass
-
-    start = stripped.find("{")
-    if start == -1:
-        return None
-
-    depth = 0
-    in_string = False
-    escape = False
-    end = -1
-    for i, ch in enumerate(stripped[start:], start=start):
-        if in_string:
-            if escape:
-                escape = False
-            elif ch == "\\":
-                escape = True
-            elif ch == '"':
-                in_string = False
-            continue
-        if ch == '"':
-            in_string = True
-        elif ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                end = i
-                break
-
-    if end == -1 or end <= start:
-        return None
-    candidate = stripped[start : end + 1]
-    try:
-        json.loads(candidate)
-        return candidate
-    except json.JSONDecodeError:
-        return None
-
-
-def coerce_analysis_from_text(response_text: str) -> AnalysisResponse:
-    """Best-effort parse of an AnalyseResponse from plain text when JSON is unavailable."""
-    lowered = response_text.lower()
-    issue_markers = ["wrong", "incorrect", "mistake", "error", "check", "not correct"]
-    has_issue = any(marker in lowered for marker in issue_markers)
-
-    message = response_text.strip() or "Try checking your last step once more."
-    if len(message) > 220:
-        message = message[:220].rstrip() + "..."
-
-    suggestion = (
-        "Compare your last step with the operation in the question."
-        if has_issue
-        else "Good progress — continue to the next step."
-    )
-    confidence = 0.55 if has_issue else 0.45
-    return AnalysisResponse(
-        has_issue=has_issue,
-        message=message,
-        suggestion=suggestion,
-        confidence=confidence,
-    )
-
-
-def parse_analyse_response(response_text: str) -> AnalysisResponse | None:
-    """Parse and normalise an AnalyseResponse from a model's text output."""
-    payload_text = extract_json_object(response_text)
-    if payload_text:
-        try:
-            parsed = json.loads(payload_text)
-            if isinstance(parsed, list):
-                if not parsed:
-                    return None
-                parsed = parsed[0]
-            if not isinstance(parsed, dict):
-                return None
-            analysis = AnalysisResponse.model_validate(parsed)
-        except (json.JSONDecodeError, ValueError):
-            analysis = coerce_analysis_from_text(response_text)
-    else:
-        analysis = coerce_analysis_from_text(response_text)
-
-    confidence = round(max(0.0, min(1.0, analysis.confidence)), 2)
-    return AnalysisResponse(
-        has_issue=analysis.has_issue,
-        message=analysis.message,
-        suggestion=analysis.suggestion,
-        confidence=confidence,
-    )
 
 
 class LLMProvider(ABC):
@@ -177,13 +62,6 @@ class LLMProvider(ABC):
         context: str,
         image_png: bytes | None,
     ) -> HelpResponse: ...
-
-    @abstractmethod
-    def analyse_student_work(
-        self,
-        question: str,
-        image_png: bytes,
-    ) -> AnalysisResponse: ...
 
 
 class TaskGenerator:

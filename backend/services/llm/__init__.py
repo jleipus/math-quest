@@ -1,13 +1,11 @@
 from backend.config import get_settings
 
-from backend.models.assistant import HelpResponse, AnalysisResponse
+from backend.models.assistant import HelpResponse
 from backend.services.llm.base import (
     LLMProvider,
     TaskGenerator,
     TaskRegistry,
 )
-
-from backend.models.game import Task
 
 
 def _build_provider() -> LLMProvider:
@@ -53,18 +51,6 @@ class LLMService(TaskGenerator):
         image_png: bytes | None = None,
     ) -> HelpResponse:
         return self._provider.guide_student(question, context, image_png)
-
-    def analyse_student_work(self, question: str, image_png: bytes) -> AnalysisResponse:
-        settings = get_settings()
-        result = self._provider.analyse_student_work(question, image_png)
-        if result.confidence < settings.assistant_confidence_threshold:
-            return AnalysisResponse(
-                has_issue=False,
-                message="",
-                suggestion="",
-                confidence=result.confidence,
-            )
-        return result
 
 
 task_registry = TaskRegistry()

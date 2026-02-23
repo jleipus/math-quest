@@ -22,15 +22,3 @@ class HelpRequest(BaseModel):
 class HelpResponse(BaseModel):
     guiding_question: str
     context_used: str
-
-
-class AnalysisRequest(BaseModel):
-    task_id: str = Field(min_length=1)
-    content: str = Field(min_length=2)
-
-
-class AnalysisResponse(BaseModel):
-    has_issue: bool
-    message: str
-    suggestion: str | None = None
-    confidence: float = Field(ge=0.0, le=1.0)

@@ -3,11 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import get_settings
 from backend.routers.agent import router as agent_router
-from backend.routers.assistant import router as assistant_router
 from backend.routers.curriculum import router as curriculum_router
 from backend.routers.game import router as game_router
-
-# from backend.routers.tasks import router as tasks_router
 
 settings = get_settings()
 
@@ -23,6 +20,4 @@ app.add_middleware(
 api_prefix = "/api/v1"
 app.include_router(game_router, prefix=api_prefix)
 app.include_router(agent_router, prefix=api_prefix)
-# app.include_router(tasks_router, prefix=api_prefix)
 app.include_router(curriculum_router, prefix=api_prefix)
-app.include_router(assistant_router, prefix=api_prefix)
