@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -8,8 +8,11 @@ class ApiError(BaseModel):
     message: str
 
 
-class ApiEnvelope(BaseModel):
-    data: Any = None
+DataT = TypeVar("DataT")
+
+
+class ApiEnvelope(BaseModel, Generic[DataT]):
+    data: DataT | None = None
     error: ApiError | None = None
 
 
