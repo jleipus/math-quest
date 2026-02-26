@@ -88,10 +88,12 @@ The help endpoint (`POST /api/v1/agent/help`) uses:
 - `AI-Sweden-Models/Llama-3-8B-instruct:featherless-ai`
 - via OpenAI-compatible API base: `https://router.huggingface.co/v1`
 
-Set your token before running backend:
+Token handling (current implementation):
 
-```powershell
-$env:HF_TOKEN="your_huggingface_token_here"
-```
+- `HF_TOKEN` is currently hardcoded in `backend/main.py`.
+- No `.env` token setup is required for local run.
 
-If `HF_TOKEN` is missing or the model call fails, backend falls back to a built-in generic guiding question.
+Fallback behavior:
+
+- If hint generation fails, backend falls back to a built-in generic guiding question.
+- If card generation fails after retries, backend returns `502` with `Could not generate cards with LLM at this time`.
