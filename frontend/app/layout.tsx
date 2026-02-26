@@ -1,33 +1,30 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
+import { GameProvider } from "../lib/gameContext";
+import ParallaxBackground from "../components/ParallaxBackground";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const pixelFont = Press_Start_2P({
+  weight: "400",
+  variable: "--font-pixel",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Math Battle",
-  description: "Math learning platform with game elements",
+  title: "MathQuest",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${pixelFont.variable} antialiased`} style={{ background: "#2a0d26" }}>
+        {/* Fixed parallax behind everything */}
+        <ParallaxBackground />
+        {/* Page content sits above it */}
+        <div className="relative" style={{ zIndex: 1 }}>
+          <GameProvider>{children}</GameProvider>
+        </div>
       </body>
     </html>
   );

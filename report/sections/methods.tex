@@ -46,11 +46,31 @@ When a learner is stuck on a challenge, they can request help from an in-game ag
 
 The strict constraint on the generation layer ensures the LLM never produces direct answers. Instead, its output is limited to diagnostic questions, hints, and prompts for reflection — functioning as a peer who helps the learner think, not one who thinks for them.
 
+\subsubsection{Determining the Zone of Proximal Development}
+
+The system approximates each learner's Zone of Proximal Development by classifying problem interactions into three categories based on the level of assistance required.
+
+\begin{description}
+
+    \item [Below:] Problems that the learner solves correctly without requesting any hints, these represent mastered material.
+
+    \item [Above:] Problems where the learner fails to arrive at the correct answer despite available assistance, these are beyond the learner's current reach.
+
+    \item [Within:] Problems that the learner solves correctly after receiving one or more guiding questions from the agent, these are the problems where scaffolding is most effective and where learning is most likely to occur.
+
+\end{description}
+
+This classification is tracked per topic and accumulated over a session in the form of the user model.
+
+\input{figures/zpd_diagram.tex}
+
 \subsubsection{Dynamic User Model}
 
 Throughout a learning session, the system builds and refines a User Model that captures the learner's current mastery across mathematical topics, common error patterns, and help-seeking behavior. This model informs both the difficulty of challenges presented and the type of guidance the agent provides. For example, a learner who consistently struggles with fractions will receive challenges and scaffolding tailored to that gap, while a learner who frequently requests hints without attempting a solution first may receive prompts that encourage independent effort before offering guidance.
 
-The User Model is stored as part of the RAG context, meaning the agent's responses become increasingly personalized over the course of a session. This allows the system to adapt in real time, adjusting both the game difficulty and the pedagogical approach to keep the learner within their ZPD.
+In practice, the system tracks correct and incorrect answer attempts and hint requests, aggregated by topic. When generating new tasks or guiding questions, these metrics are summarized by the LLM into a learner profile — identifying strengths, weaknesses, and behavioral patterns — which is then included in the RAG context for subsequent interactions. This means the agent's responses become increasingly personalized over the course of a session, allowing the system to adapt both game difficulty and pedagogical approach to keep the learner within their ZPD.
+
+\input{figures/user_model_diagram.tex}
 
 \subsubsection{Gamification and Motivation}
 

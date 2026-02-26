@@ -1,0 +1,38 @@
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{
+        \begin{tikzpicture}[
+            >={Stealth[length=3mm]},
+            zone/.style={
+                    rectangle, rounded corners=5pt, draw,
+                    minimum width=9cm, minimum height=1.4cm,
+                    align=center, font=\small
+                },
+            zlabel/.style={
+                    font=\small\bfseries, align=right, text width=3cm
+                },
+            indicator/.style={
+                    font=\small, align=left, text width=5.5cm
+                },
+            ]
+
+            % Zones (stacked bottom to top)
+            \node[zone, fill=green!15, draw=green!50!black] (below) {};
+            \node[zone, fill=yellow!20, draw=yellow!60!black, above=2pt of below] (within) {};
+            \node[zone, fill=red!12, draw=red!50!black, above=2pt of within] (above) {};
+
+            % Zone labels (left side)
+            \node[zlabel, left=0.1cm of above] {Above ZPD};
+            \node[zlabel, left=0.1cm of within] {Within ZPD};
+            \node[zlabel, left=0.1cm of below] {Below ZPD};
+
+            % Indicators (inside zones)
+            \node[indicator] at (above.center) {Incorrect despite assistance\\$\rightarrow$ Too difficult, reduce difficulty};
+            \node[indicator] at (within.center) {Correct after guiding questions\\$\rightarrow$ Optimal learning zone, maintain};
+            \node[indicator] at (below.center) {Correct without hints\\$\rightarrow$ Already mastered, increase difficulty};
+        \end{tikzpicture}
+    }
+
+    \caption{Classification of problem interactions into ZPD regions.}
+    \label{fig:zpd_diagram}
+\end{figure}

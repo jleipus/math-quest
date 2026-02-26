@@ -1,0 +1,66 @@
+\begin{figure}[ht]
+    \centering
+    \resizebox{0.8\textwidth}{!}{
+        \begin{tikzpicture}[
+            >={Stealth[length=3mm]},
+            box/.style={
+                    rectangle, rounded corners=3pt, draw, fill=blue!8,
+                    minimum width=3cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            data/.style={
+                    rectangle, rounded corners=3pt, draw, dashed, fill=purple!8,
+                    minimum width=3cm, minimum height=1cm,
+                    align=center, font=\small\itshape
+                },
+            llmbox/.style={
+                    rectangle, rounded corners=3pt, draw, fill=orange!12,
+                    minimum width=3cm, minimum height=1cm,
+                    align=center, font=\small
+                },
+            groupbox/.style={
+                    rectangle, rounded corners=5pt, draw=gray!70, dashed,
+                    inner sep=12pt
+                },
+            grouplabel/.style={
+                    font=\small\bfseries, text=gray!70
+                },
+            label/.style={
+                    font=\scriptsize, fill=white, inner sep=1pt
+                },
+            ]
+
+            % Student interactions
+            \node[box] (answer) {Answer Attempts};
+            \node[box, right=of answer] (topics) {Topic Tags};
+            \node[box, right=of topics] (hints) {Hint Requests};
+
+            \node[groupbox, fit=(answer)(topics)(hints)] (metrics) {};
+            \node[grouplabel, above=0pt of metrics.north] {Session Metrics};
+
+            % LLM summarization
+            \node[llmbox, below=of metrics] (llm) {LLM Summarization};
+
+            % Output
+            \node[box, below=of llm] (rag) {RAG Context};
+
+            % Consumers
+            \node[box, below left=of rag] (tasks) {Task\\Generation};
+            \node[box, below right=of rag] (guidance) {Guidance\\Generation};
+
+            % Arrows
+            \draw[->] (metrics) -- (llm);
+            \draw[->] (llm) -- (rag);
+            \draw[->] (rag) -- (tasks);
+            \draw[->] (rag) -- (guidance);
+
+            % Feedback loop
+            \draw[->, dashed, gray] (tasks.west) -- ++(-1,0) |-  (answer.west);
+            \draw[->, dashed, gray] (guidance.east) -- ++(1,0) |-  (hints.east);
+
+        \end{tikzpicture}
+    }
+
+    \caption{User Model creation process.}
+    \label{fig:user_model_diagram}
+\end{figure}
