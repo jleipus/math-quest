@@ -4,7 +4,7 @@ from threading import Lock
 from uuid import UUID, uuid4
 
 from backend.config import get_settings
-from backend.models.game import Card, CardType, Task, InitGameResponse, DrawHandResponse
+from backend.models.game import Card, CardType, PublicTask, Task, InitGameResponse, DrawHandResponse
 
 
 _DIFFICULTIES = ["easy", "medium", "hard"]
@@ -158,34 +158,42 @@ class GameService:
         from backend.services.user_model import user_model_service
 
         grade = session.grade
-        profile_context = user_model_service.get_or_create(str(session.session_id)).get_profile_context()
-        topic = curriculum_service.get_random_topic(grade)
+        user_model = user_model_service.get_or_create(str(session.session_id))
+        profile_context = user_model.get_profile_context()
 
-        try:
-            curriculum_context = curriculum_service.retrieve_context(grade=grade, topic=topic, question=topic)
-        except RuntimeError:
-            curriculum_context = ""
-
-        # Generate tasks with mixed difficulties
-        tasks_per_difficulty = {
-            "easy": 2,
-            "medium": 2,
-            "hard": 1,
-        }
-        all_tasks: list[Task] = []
-        for difficulty, count in tasks_per_difficulty.items():
-            if count == 0:
-                continue
-
-            tasks = llm_service.generate_tasks(
-                grade=grade,
-                topic=topic,
-                difficulty=difficulty,
-                count=count,
-                curriculum_context=curriculum_context,
+        # If user model is not empty, generate card slots
+        slots = []
+        if len(user_model.records) > 0:
+            all_topics = curriculum_service.get_all_topics(grade)
+            slots = llm_service.select_hand_slots(
+                topics=all_topics,
                 profile_context=profile_context,
+                hand_size=hand_size,
             )
-            all_tasks.extend(tasks)
+
+        # Fallback: fill any missing slots with random topic + balanced difficulties
+        fallback_difficulties = ["easy", "easy", "medium", "medium", "hard"]
+        while len(slots) < hand_size:
+            topic = curriculum_service.get_random_topic(grade)
+            difficulty = fallback_difficulties[len(slots) % len(fallback_difficulties)]
+            slots.append((topic, difficulty))
+
+        all_tasks: list[Task] = []
+        for topic, difficulty in slots:
+            try:
+                curriculum_context = curriculum_service.retrieve_context(grade=grade, topic=topic, question=topic)
+            except RuntimeError:
+                curriculum_context = ""
+            all_tasks.extend(
+                llm_service.generate_tasks(
+                    grade=grade,
+                    topic=topic,
+                    difficulty=difficulty,
+                    count=1,
+                    curriculum_context=curriculum_context,
+                    profile_context=profile_context,
+                )
+            )
         task_registry.put(all_tasks)
         self._rng.shuffle(all_tasks)
 
@@ -219,13 +227,12 @@ class GameService:
                 card_power=card_power,
                 card_type=card_type,
                 energy_cost=energy_cost,
-                task=Task(
+                task=PublicTask(
                     task_id=task.task_id,
                     question=task.question,
                     grade=task.grade,
                     topic=task.topic,
                     difficulty=task.difficulty,
-                    expected_answer=task.expected_answer,
                 ),
             )
             expected_answers[str(task.task_id)] = task.expected_answer

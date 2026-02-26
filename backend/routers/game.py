@@ -54,8 +54,11 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
 
     correct = game_service.check_answer(payload.answer, expected)
 
-    user_model_service.get_or_create(str(payload.session_id)).record_attempt(
-        topic=card.task.topic, correct=correct
+    user_model_service.record_attempt(
+        session_id=str(payload.session_id),
+        topic=card.task.topic,
+        correct=correct,
+        difficulty=card.task.difficulty,
     )
 
     if correct:

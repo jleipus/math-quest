@@ -6,11 +6,14 @@ from backend.models.game import Task
 from backend.services.llm.base import (
     MINIGUIDE_SYSTEM_PROMPT,
     TASK_SYSTEM_PROMPT,
+    HAND_SELECTOR_SYSTEM_PROMPT,
     HelpResponse,
     LLMProvider,
     build_guide_user_text,
-    build_task_user_text,
+    build_task_text,
+    build_hand_selector_text,
     _parse_task,
+    _parse_hand_slots,
 )
 
 _CLAUDE_API_BASE = "https://api.anthropic.com/v1"
@@ -54,18 +57,38 @@ class ClaudeProvider(LLMProvider):
             raise RuntimeError("Claude returned no usable text")
         return HelpResponse(guiding_question=text.strip(), context_used=context)
 
-    def generate_task(self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = "") -> Task:
+    def generate_task(
+        self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = ""
+    ) -> Task:
         settings = get_settings()
         payload = {
             "model": settings.claude_model,
             "max_tokens": 128,
             "system": TASK_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": build_task_user_text(grade, topic, difficulty, curriculum_context, profile_context)}],
+            "messages": [
+                {
+                    "role": "user",
+                    "content": build_task_text(grade, topic, difficulty, curriculum_context, profile_context),
+                }
+            ],
         }
         text = self._call(payload, settings)
         if not text:
             raise RuntimeError("Claude returned no usable text for task generation")
         return _parse_task(text, grade, topic, difficulty)
+
+    def select_hand_slots(self, topics: list[str], profile_context: str, hand_size: int) -> list[tuple[str, str]]:
+        settings = get_settings()
+        payload = {
+            "model": settings.claude_model,
+            "max_tokens": 256,
+            "system": HAND_SELECTOR_SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": build_hand_selector_text(topics, profile_context, hand_size)}],
+        }
+        text = self._call(payload, settings)
+        if not text:
+            raise RuntimeError("Claude returned no usable text for hand selection")
+        return _parse_hand_slots(text, set(topics), hand_size)
 
     @staticmethod
     def _call(payload: dict, settings) -> str | None:

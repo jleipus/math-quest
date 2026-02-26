@@ -11,6 +11,7 @@ import type {
   AnswerResponse,
   PlayCardRequest,
   PlayCardResponse,
+  UserModelResponse,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -48,6 +49,10 @@ export async function playCard({
 
 export async function endTurn({ session_id }: EndTurnRequest): Promise<EndTurnResponse> {
   return post<EndTurnResponse>("/game/end_turn", { session_id });
+}
+
+export async function fetchUserModel(session_id: string): Promise<UserModelResponse> {
+  return get<UserModelResponse>(`/user_model/${session_id}`);
 }
 
 export async function fetchGrades(): Promise<string[]> {

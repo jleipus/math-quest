@@ -25,9 +25,13 @@ class Settings(BaseSettings):
     default_hand_size: int = 5
     max_energy: int = 3
 
-    chroma_db_path: str = "./data/chroma"
-    tiiny_db_path: str = "./data/curriculum_tree.json"
     rag_top_k: int = 3
+    chroma_db_path: str = "./data/chroma"
+    tiny_db_path: str = "./data/curriculum_tree.json"
+    user_model_db_path: str = "./data/user_models.json"
+    llm_log_path: str = "./logs/llm_requests.log"
+
+    allowed_origins: list[str] = ["http://localhost:3000"]
 
 
 @lru_cache(maxsize=1)

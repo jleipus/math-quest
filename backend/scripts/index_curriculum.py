@@ -137,7 +137,7 @@ def write_to_tinydb(tree: list[dict], db_path: str) -> None:
 def main() -> None:
     settings = get_settings()
     chroma_dir = settings.chroma_db_path
-    tree_db_path = settings.tiiny_db_path
+    tree_db_path = settings.tiny_db_path
 
     print(f"Fetching index: {INDEX_URL}")
     resp = requests.get(INDEX_URL, timeout=15)

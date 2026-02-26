@@ -8,7 +8,8 @@ import type { Card } from "../lib/types";
 import CardHand from "./CardHand";
 import EnemyDisplay from "./EnemyDisplay";
 import PlayerHPBar from "./PlayerHPBar";
-import TaskModal from "./TaskModal";
+import TaskModal, { type CardModalState } from "./TaskModal";
+import UserModelModal from "./UserModelModal";
 
 type FloatingNumber = {
   id: number;
@@ -22,6 +23,7 @@ export default function BattleScreen() {
   const router = useRouter();
   const {
     game,
+    hydrated,
     setEnemyHp,
     setPlayerHp,
     setHand,
@@ -33,6 +35,8 @@ export default function BattleScreen() {
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [cardStates, setCardStates] = useState<Map<string, CardModalState>>(new Map());
+  const [showUserModel, setShowUserModel] = useState(false);
   const [playingCardId, setPlayingCardId] = useState<string | null>(null);
   const [enemyShake, setEnemyShake] = useState(false);
   const [playerFlash, setPlayerFlash] = useState(false);
@@ -49,8 +53,8 @@ export default function BattleScreen() {
   }, [gameover, router]);
 
   useEffect(() => {
-    if (!game) router.push("/");
-  }, [game, router]);
+    if (hydrated && !game) router.push("/");
+  }, [hydrated, game, router]);
 
   useEffect(() => {
     if (game && game.player_hp <= 0) setGameover(true);
@@ -95,7 +99,9 @@ export default function BattleScreen() {
     if (!game) return;
 
     if (game.energy < card.energy_cost) {
-      setError(`Not enough energy! This card costs ${card.energy_cost} energy (you have ${game.energy}).`);
+      setError(
+        `Not enough energy! This card costs ${card.energy_cost} energy (you have ${game.energy}).`,
+      );
       return;
     }
 
@@ -126,6 +132,11 @@ export default function BattleScreen() {
       }
 
       removeCard(card.card_id);
+      setCardStates((prev) => {
+        const m = new Map(prev);
+        m.delete(card.card_id);
+        return m;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to play card.");
     } finally {
@@ -165,6 +176,7 @@ export default function BattleScreen() {
       setTimeout(() => setTurnMessage(null), 4000);
 
       setHand(result.hand, result.enemy_next_damage);
+      setCardStates(new Map());
       if (result.player_hp <= 0) setGameover(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to end turn.");
@@ -203,19 +215,37 @@ export default function BattleScreen() {
           )}
         </div>
 
-        <div
-          className="font-pixel text-right text-sm"
-          style={{
-            background: "var(--px-panel)",
-            border: "2px solid var(--px-panel-border)",
-            boxShadow: "3px 3px 0 #1d0a1a",
-            padding: "10px 16px",
-            color: "var(--px-text-dim)",
-            lineHeight: 1.8,
-          }}
-        >
-          <div style={{ color: "var(--px-text)" }}>{game.topic}</div>
-          <div>Floor {game.floor}</div>
+        <div className="flex flex-col items-end gap-2">
+          <div
+            className="font-pixel text-right text-sm"
+            style={{
+              background: "var(--px-panel)",
+              border: "2px solid var(--px-panel-border)",
+              boxShadow: "3px 3px 0 #1d0a1a",
+              padding: "10px 16px",
+              color: "var(--px-text-dim)",
+              lineHeight: 1.8,
+            }}
+          >
+            <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
+            <div>Floor {game.floor}</div>
+          </div>
+          <button
+            onClick={() => setShowUserModel(true)}
+            className="font-pixel"
+            style={{
+              fontSize: "0.75rem",
+              background: "var(--px-panel)",
+              border: "2px solid var(--px-panel-border)",
+              boxShadow: "3px 3px 0 #1d0a1a",
+              color: "var(--px-gold)",
+              padding: "6px 12px",
+              letterSpacing: "0.06em",
+              cursor: "pointer",
+            }}
+          >
+            ⚙️ Profile
+          </button>
         </div>
       </div>
 
@@ -328,9 +358,17 @@ export default function BattleScreen() {
       {selectedCard && (
         <TaskModal
           card={selectedCard}
+          savedState={cardStates.get(selectedCard.card_id)}
           onPlayCard={handlePlayCard}
-          onClose={() => setSelectedCard(null)}
+          onClose={(state) => {
+            setCardStates((prev) => new Map(prev).set(selectedCard.card_id, state));
+            setSelectedCard(null);
+          }}
         />
+      )}
+
+      {showUserModel && game && (
+        <UserModelModal sessionId={game.session_id} onClose={() => setShowUserModel(false)} />
       )}
     </div>
   );

@@ -22,6 +22,24 @@ class CurriculumService:
             raise RuntimeError("Curriculum tree database is empty or unavailable. Run index_curriculum first.")
         return [g.name for g in grades]
 
+    def get_all_topics(self, grade_name: str) -> list[str]:
+        """Return all topic names for the given grade.
+
+        Args:
+            grade_name: Grade name as stored in TinyDB.
+
+        Returns:
+            List of topic name strings.
+
+        Raises:
+            RuntimeError: If the grade is not found or has no topics.
+        """
+        grades = self._load_tree()
+        grade = next((g for g in grades if g.name == grade_name), None)
+        if not grade or not grade.topics:
+            raise RuntimeError(f"No topics found for grade {grade_name!r}.")
+        return [t.name for t in grade.topics]
+
     def get_random_topic(self, grade_name: str) -> str:
         """Return a random topic name for the given grade.
 
@@ -78,7 +96,7 @@ class CurriculumService:
             from tinydb import TinyDB
 
             settings = get_settings()
-            db = TinyDB(settings.tiiny_db_path)
+            db = TinyDB(settings.tiny_db_path)
             return [Grade.model_validate(row) for row in db.all()]
         except Exception:
             return []

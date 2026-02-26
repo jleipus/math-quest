@@ -103,3 +103,23 @@ export type PlayCardResponse = {
   card_type: CardType;
   enemy_defeated: boolean;
 };
+
+// User model
+
+export type DifficultyRecord = {
+  topic: string;
+  difficulty: string;
+  attempts: number;
+  hints: number;
+  correct: number;
+};
+
+export type TopicRecord = {
+  topic: string;
+  records: Record<string, DifficultyRecord>;
+};
+
+export type UserModelResponse = {
+  session_id: string;
+  topics: TopicRecord[];
+};

@@ -2,7 +2,7 @@ import random
 from uuid import uuid4
 
 from backend.models.game import Task
-from backend.services.llm.base import HelpResponse, LLMProvider
+from backend.services.llm.base import HelpResponse, LLMProvider, _parse_hand_slots
 
 
 class MockProvider(LLMProvider):
@@ -24,7 +24,9 @@ class MockProvider(LLMProvider):
             context_used="(mock — no LLM configured)",
         )
 
-    def generate_task(self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = "") -> Task:
+    def generate_task(
+        self, grade: str, topic: str, difficulty: str, curriculum_context: str = "", profile_context: str = ""
+    ) -> Task:
         lo, hi = {"easy": (1, 10), "medium": (10, 50)}.get(difficulty, (25, 120))
         a, b = self._rng.randint(lo, hi), self._rng.randint(lo, hi)
 
@@ -56,3 +58,14 @@ class MockProvider(LLMProvider):
             topic=topic,
             difficulty=difficulty,
         )
+
+    def select_hand_slots(self, topics: list[str], profile_context: str, hand_size: int) -> list[tuple[str, str]]:
+        difficulties = ["easy", "easy", "medium", "medium", "hard"]
+        shuffled = list(topics)
+        self._rng.shuffle(shuffled)
+        slots = []
+        for i in range(hand_size):
+            topic = shuffled[i % len(shuffled)]
+            difficulty = difficulties[i % len(difficulties)]
+            slots.append((topic, difficulty))
+        return slots

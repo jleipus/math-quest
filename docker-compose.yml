@@ -9,7 +9,9 @@ services:
       - .env
     environment:
       DAIS_CHROMA_DB_PATH: /data/chroma
-      DAIS_TIINY_DB_PATH: /data/curriculum_tree.json
+      DAIS_TINY_DB_PATH: /data/curriculum_tree.json
+      DAIS_USER_MODEL_DB_PATH: /data/user_models.json
+      DAIS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
     volumes:
       - app_data:/data
     restart: unless-stopped

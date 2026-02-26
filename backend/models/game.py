@@ -21,12 +21,24 @@ class DrawHandRequest(BaseModel):
 
 
 class Task(BaseModel):
+    """Internal task model."""
+
     task_id: UUID
     question: str
     grade: str
     topic: str
     difficulty: str
     expected_answer: str
+
+
+class PublicTask(BaseModel):
+    """Public task model, excluding expected_answer."""
+
+    task_id: UUID
+    question: str
+    grade: str
+    topic: str
+    difficulty: str
 
 
 CardType = Literal["attack", "heal", "shield"]
@@ -38,7 +50,7 @@ class Card(BaseModel):
     card_power: int
     card_type: CardType
     energy_cost: int
-    task: Task
+    task: PublicTask
 
 
 class DrawHandResponse(BaseModel):

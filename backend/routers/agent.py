@@ -22,8 +22,12 @@ def request_help(payload: HelpRequest) -> HelpResponse:
     if payload.student_work:
         image_png = rasterize_strokes_to_png(payload.student_work)
 
+    user_model_service.record_hint(
+        session_id=str(payload.session_id),
+        topic=task.topic,
+        difficulty=task.difficulty,
+    )
     user_model = user_model_service.get_or_create(str(payload.session_id))
-    user_model.record_hint(topic=task.topic)
     profile_context = user_model.get_profile_context()
 
     result = llm_service.generate_guidance(

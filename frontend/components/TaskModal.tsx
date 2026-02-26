@@ -1,16 +1,24 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import type { Card } from "../lib/types";
+import type { Card, Stroke } from "../lib/types";
 import { requestHelp, submitAnswer } from "../lib/api";
 import { useGame } from "../lib/gameContext";
 import AgentChat from "./AgentChat";
 import DrawingCanvas, { type DrawingCanvasHandle } from "./DrawingCanvas";
 
+export type CardModalState = {
+  answer: string;
+  messages: string[];
+  solved: boolean;
+  strokes: Stroke[];
+};
+
 type Props = {
   card: Card;
+  savedState?: CardModalState;
   onPlayCard: (card: Card) => void;
-  onClose: () => void;
+  onClose: (state: CardModalState) => void;
 };
 
 const cardTypeInfo: Record<string, { icon: string; label: string; color: string }> = {
@@ -19,7 +27,7 @@ const cardTypeInfo: Record<string, { icon: string; label: string; color: string 
   shield: { icon: "🛡️", label: "Shield", color: "#6080d0" },
 };
 
-export default function TaskModal({ card, onPlayCard, onClose }: Props) {
+export default function TaskModal({ card, savedState, onPlayCard, onClose }: Props) {
   const { game } = useGame();
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -28,18 +36,27 @@ export default function TaskModal({ card, onPlayCard, onClose }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(savedState?.answer ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [helpLoading, setHelpLoading] = useState(false);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<string[]>(savedState?.messages ?? []);
   const [feedback, setFeedback] = useState<{ type: "error" | "success"; text: string } | null>(
     null,
   );
-  const [solved, setSolved] = useState(false);
+  const [solved, setSolved] = useState(savedState?.solved ?? false);
+
+  function collectState(): CardModalState {
+    return {
+      answer,
+      messages,
+      solved,
+      strokes: canvasRef.current?.getStrokes() ?? [],
+    };
+  }
 
   function handleClose() {
     if (solved) onPlayCard(card);
-    onClose();
+    onClose(collectState());
   }
 
   useEffect(() => {
@@ -48,7 +65,7 @@ export default function TaskModal({ card, onPlayCard, onClose }: Props) {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [solved]);
+  }, [solved, answer, messages]);
 
   async function handleSubmit() {
     if (!game || !answer.trim() || solved) return;
@@ -215,7 +232,7 @@ export default function TaskModal({ card, onPlayCard, onClose }: Props) {
               ✏️ Work it out here
             </p>
             <div style={{ border: "2px solid var(--px-panel-border)", flex: 1, minHeight: 0 }}>
-              <DrawingCanvas ref={canvasRef} />
+              <DrawingCanvas ref={canvasRef} initialStrokes={savedState?.strokes} />
             </div>
           </div>
 

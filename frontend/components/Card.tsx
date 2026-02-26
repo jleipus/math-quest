@@ -75,7 +75,7 @@ export default function Card({ card, index, onClick, playing, affordable, energy
       disabled={isDisabled}
       title={!affordable ? `Need ${energyCost} energy` : "Click to play"}
       style={{
-        width: 172,
+        width: 230,
         minHeight: 264,
         background: theme.bg,
         border: `3px solid ${theme.border}`,
@@ -177,7 +177,14 @@ export default function Card({ card, index, onClick, playing, affordable, energy
         <div className="flex-1">
           <p
             className="font-pixel leading-relaxed"
-            style={{ fontSize: "0.58rem", color: "var(--px-text-dim)" }}
+            style={{
+              fontSize: "0.58rem",
+              color: "var(--px-text-dim)",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
           >
             {card.task.question}
           </p>
