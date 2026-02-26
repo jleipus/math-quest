@@ -8,6 +8,7 @@ from backend.models.common import error_response
 from backend.routers.assistant import router as assistant_router
 from backend.routers.curriculum import router as curriculum_router
 from backend.routers.tasks import router as tasks_router
+from backend.services.vision import initialize_ocr_engine
 
 settings = get_settings()
 
@@ -30,6 +31,11 @@ api_prefix = "/api/v1"
 app.include_router(tasks_router, prefix=api_prefix)
 app.include_router(curriculum_router, prefix=api_prefix)
 app.include_router(assistant_router, prefix=api_prefix)
+
+
+@app.on_event("startup")
+def startup_checks() -> None:
+    initialize_ocr_engine()
 
 
 @app.exception_handler(HTTPException)

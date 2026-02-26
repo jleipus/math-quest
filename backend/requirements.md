@@ -129,7 +129,7 @@ Stroke array format:
 
 **Notes:**
 
-- The backend should rasterise the strokes to a PNG image before passing to the LLM.
+- The backend should rasterise the strokes to a PNG image, run OCR on it, and pass only extracted text to the LLM.
 - The LLM should be given the original task question as context, so it can reason about what the student is attempting.
 - If `confidence` is below a configurable threshold (default: `0.6`), `has_issue` should be `false` and no message shown — avoid over-interrupting the student.
 

@@ -1,6 +1,7 @@
 import { Task, Stroke, AnalysisResult, Difficulty } from "../types";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
 
 export type GenerateTasksRequest = {
   topic: string;
@@ -48,12 +49,14 @@ export async function generateTasks(
 export async function analyseAnswer(
   taskId: string,
   strokes: Stroke[],
+  signal?: AbortSignal,
 ): Promise<AnalysisResult> {
   const response = await fetch(`${API_BASE_URL}/assistant/analyse`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    signal,
     body: JSON.stringify({
       task_id: taskId,
       content: JSON.stringify(strokes),

@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from backend.models.assistant import AnalyseData, AnalyseRequest, Stroke
 from backend.models.common import ApiEnvelope, success_response
 from backend.services.llm import llm_service, task_registry
-from backend.services.vision import rasterize_strokes_to_png
+from backend.services.vision import extract_text_from_strokes
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -23,9 +23,13 @@ def analyse(payload: AnalyseRequest) -> dict[str, Any]:
     except (json.JSONDecodeError, ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail="Invalid stroke JSON content") from exc
 
-    image_png = rasterize_strokes_to_png(strokes)
     try:
-        analysis = llm_service.analyse_student_work(task.question, image_png)
+        extracted_text = extract_text_from_strokes(strokes)
+        analysis = llm_service.analyse_student_work(
+            task.question,
+            extracted_text,
+            task.expected_answer,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

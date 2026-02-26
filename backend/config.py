@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,11 +14,11 @@ class Settings(BaseModel):
 
     assistant_confidence_threshold: float = Field(default=0.4, ge=0.0, le=1.0)
 
-    llm_provider: str = "gemini"
-    gemini_api_key: str = "AIzaSyA_tjLBoLvWgNwDzFSLjhOei4C0DhS6diM"
-    gemini_model: str = "gemini-3-flash-preview"
-    gemini_api_base: str = "https://generativelanguage.googleapis.com/v1beta"
-    gemini_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+    llm_provider: Literal["huggingface"] = "huggingface"
+    hf_provider: Literal["featherless-ai"] = "featherless-ai"
+    hf_model: str = "AI-Sweden-Models/Llama-3-8B"
+    hf_token: str = "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"
+    hf_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
 
 @lru_cache(maxsize=1)

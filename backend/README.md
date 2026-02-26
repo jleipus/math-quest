@@ -5,7 +5,7 @@ FastAPI backend for DAIS Active Learning.
 ## Requirements
 
 - Python 3.11+ (project target is 3.12+; current workspace uses 3.11 and runs fine)
-- Dependencies in `requirements.txt`
+- CPU-first dependencies in `requirements.txt` (recommended default)
 
 ## Install
 
@@ -21,6 +21,8 @@ Or with your active Python:
 python -m pip install -r backend/requirements.txt
 ```
 
+This setup uses CPU OCR by default for portability and stable startup.
+
 ## Run
 
 From repository root:
@@ -33,21 +35,26 @@ API base: `http://127.0.0.1:8000/api/v1`
 
 ## LLM Configuration
 
-Assistant analysis requires a configured Gemini provider.
+Assistant analysis requires a configured Hugging Face provider.
+The backend now uses a pretrained OCR CNN (`easyocr`) to convert student drawings/writing into text, and only that text is sent to Hugging Face inference.
 
 `backend/config.py` is the single source of truth for configuration.
 
-### Gemini API setup
+### Hugging Face API setup
 
 Set these values in `backend/config.py`:
 
-- `llm_provider = "gemini"`
-- `gemini_api_key = "your_gemini_api_key"`
+- `llm_provider = "huggingface"`
+- `hf_provider = "featherless-ai"`
+- `hf_model = "AI-Sweden-Models/Llama-3-8B"`
 - `assistant_confidence_threshold = 0.4`
 
-`gemini_api_key` has no default value. The app fails to start until it is set.
+Set your token via environment variable:
 
-If the Gemini key is missing or the Gemini call fails, `/assistant/analyse` returns an error.
+- `HF_TOKEN=your_huggingface_token`
+
+If the HF token is missing or the inference call fails, `/assistant/analyse` returns an error.
+On first OCR use, EasyOCR may download model files automatically.
 
 ## API Examples (PowerShell)
 

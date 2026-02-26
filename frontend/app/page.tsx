@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import PlayerCard from "./components/PlayerCard";
 import MathCard from "./components/MathCard";
 import DrawingModal from "./components/DrawingModal";
 import { Player, Card, Stroke, Difficulty } from "./types";
 import { generateTasks, analyseAnswer } from "./services/api";
+
+type FeedbackVariant = "issue" | "clearer" | "success";
 
 export default function Home() {
   const [player, setPlayer] = useState<Player>({
@@ -17,7 +19,7 @@ export default function Home() {
 
   const [enemy, setEnemy] = useState<Player>({
     name: "Enemy",
-    health: 80,
+    health: 100,
     maxHealth: 100,
     avatar: "👾",
   });
@@ -26,7 +28,15 @@ export default function Home() {
   const [isLoadingCards, setIsLoadingCards] = useState(true);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackVariant, setFeedbackVariant] =
+    useState<FeedbackVariant>("clearer");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingCompletionTaskId, setPendingCompletionTaskId] = useState<
+    string | null
+  >(null);
+  const analyseAbortControllerRef = useRef<AbortController | null>(null);
+  const submitSequenceRef = useRef(0);
+  const MIN_CONFIDENCE_TO_COMPLETE = 0.6;
 
   // Calculate damage based on difficulty
   const getDamageForDifficulty = (difficulty: Difficulty): number => {
@@ -45,7 +55,7 @@ export default function Home() {
       try {
         // Fetch a mix of difficulties
         const easyTasks = await generateTasks({
-          topic: "arithmetic",
+          topic: "addition",
           difficulty: "easy",
           count: 2,
         });
@@ -55,7 +65,7 @@ export default function Home() {
           count: 2,
         });
         const hardTasks = await generateTasks({
-          topic: "division",
+          topic: "fractions",
           difficulty: "hard",
           count: 1,
         });
@@ -80,50 +90,100 @@ export default function Home() {
   const playCard = (card: Card) => {
     setSelectedCard(card);
     setFeedback(null);
+    setFeedbackVariant("clearer");
+    setPendingCompletionTaskId(null);
   };
 
   const closeDrawingWindow = () => {
+    analyseAbortControllerRef.current?.abort();
+    analyseAbortControllerRef.current = null;
+
+    if (
+      selectedCard &&
+      pendingCompletionTaskId &&
+      pendingCompletionTaskId === selectedCard.task_id
+    ) {
+      setEnemy((prev) => ({
+        ...prev,
+        health: Math.max(0, prev.health - selectedCard.damage),
+      }));
+      setCards((prev) =>
+        prev.filter((card) => card.task_id !== selectedCard.task_id),
+      );
+    }
+
+    setPendingCompletionTaskId(null);
     setSelectedCard(null);
     setFeedback(null);
+    setFeedbackVariant("clearer");
+    setIsSubmitting(false);
   };
+
+  useEffect(() => {
+    return () => {
+      analyseAbortControllerRef.current?.abort();
+      analyseAbortControllerRef.current = null;
+    };
+  }, []);
 
   const handleSubmitAnswer = async (strokes: Stroke[]) => {
     if (!selectedCard) return;
 
+    analyseAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    analyseAbortControllerRef.current = abortController;
+    submitSequenceRef.current += 1;
+    const submitSeq = submitSequenceRef.current;
+    const currentTaskId = selectedCard.task_id;
+
     setIsSubmitting(true);
     setFeedback(null);
+    setFeedbackVariant("clearer");
 
     try {
-      const result = await analyseAnswer(selectedCard.task_id, strokes);
+      const result = await analyseAnswer(selectedCard.task_id, strokes, abortController.signal);
+
+      if (submitSequenceRef.current !== submitSeq) {
+        return;
+      }
 
       if (result.message) {
         setFeedback(result.message);
+        if (!result.has_issue && result.confidence < MIN_CONFIDENCE_TO_COMPLETE) {
+          setFeedbackVariant("clearer");
+        } else if (result.has_issue) {
+          setFeedbackVariant("issue");
+        } else {
+          setFeedbackVariant("success");
+        }
       } else {
         console.log("No feedback message received.");
       }
 
-      // If answer is correct, deal damage to enemy
-      if (!result.has_issue) {
-        setTimeout(() => {
-          setEnemy((prev) => ({
-            ...prev,
-            health: Math.max(0, prev.health - selectedCard.damage),
-          }));
-          closeDrawingWindow();
+      const isConfidentlyCorrect =
+        !result.has_issue && result.confidence >= MIN_CONFIDENCE_TO_COMPLETE;
 
-          const index = cards.findIndex((card) => {
-            card.task_id == selectedCard.task_id;
-          });
-
-          if (index > -1) {
-            setCards((prev) => {
-              return prev.splice(index, 1);
-            });
-          }
-        }, 1000);
+      // Mark card as pending completion, but do not auto-close the modal.
+      // The user closes manually to continue.
+      if (isConfidentlyCorrect) {
+        setPendingCompletionTaskId(currentTaskId);
       }
+    } catch (error) {
+      if (submitSequenceRef.current !== submitSeq) {
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      setFeedback("Analysis failed. Please try again.");
+      setFeedbackVariant("clearer");
     } finally {
-      setIsSubmitting(false);
+      if (submitSequenceRef.current === submitSeq) {
+        analyseAbortControllerRef.current = null;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -175,6 +235,7 @@ export default function Home() {
           onSubmit={handleSubmitAnswer}
           isSubmitting={isSubmitting}
           feedback={feedback}
+          feedbackVariant={feedbackVariant}
         />
       )}
     </div>

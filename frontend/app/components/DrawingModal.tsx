@@ -3,12 +3,15 @@
 import { useRef, useEffect, useState } from "react";
 import { Card, Point, Stroke } from "../types";
 
+type FeedbackVariant = "issue" | "clearer" | "success";
+
 type DrawingModalProps = {
   card: Card;
   onClose: () => void;
   onSubmit: (strokes: Stroke[]) => void;
   isSubmitting: boolean;
   feedback: string | null;
+  feedbackVariant: FeedbackVariant;
 };
 
 export default function DrawingModal({
@@ -17,46 +20,87 @@ export default function DrawingModal({
   onSubmit,
   isSubmitting,
   feedback,
+  feedbackVariant,
 }: DrawingModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
+  const currentStrokeRef = useRef<Point[]>([]);
+  const isDrawingRef = useRef(false);
+  const strokesRef = useRef<Stroke[]>([]);
+  const devicePixelRatioRef = useRef(1);
+
+  const drawStroke = (ctx: CanvasRenderingContext2D, points: Point[]) => {
+    if (points.length === 0) return;
+
+    if (points.length === 1) {
+      const point = points[0];
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let index = 1; index < points.length; index++) {
+      ctx.lineTo(points[index].x, points[index].y);
+    }
+    ctx.stroke();
+  };
+
+  const configureCanvas = () => {
+    if (!canvasRef.current || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    canvasRef.current.style.width = `${displayWidth}px`;
+    canvasRef.current.style.height = `${displayHeight}px`;
+    canvasRef.current.width = Math.round(displayWidth * dpr);
+    canvasRef.current.height = Math.round(displayHeight * dpr);
+
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+
+    devicePixelRatioRef.current = dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+    ctxRef.current = ctx;
+  };
+
+  const redrawCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+
+    const dpr = devicePixelRatioRef.current || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    strokesRef.current.forEach((stroke) => {
+      drawStroke(ctx, stroke.points);
+    });
+
+    if (currentStrokeRef.current.length > 0) {
+      drawStroke(ctx, currentStrokeRef.current);
+    }
+  };
 
   useEffect(() => {
     const resizeCanvas = () => {
-      if (canvasRef.current && containerRef.current) {
-        const container = containerRef.current;
-        const rect = container.getBoundingClientRect();
-
-        canvasRef.current.width = rect.width;
-        canvasRef.current.height = rect.height;
-
-        const ctx = canvasRef.current.getContext("2d");
-        if (ctx) {
-          ctx.lineWidth = 4;
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.strokeStyle = "#ffffff";
-          ctxRef.current = ctx;
-        }
-
-        // Redraw all strokes after resize
-        if (ctx && strokes.length > 0) {
-          strokes.forEach((stroke) => {
-            if (stroke.points.length > 1) {
-              ctx.beginPath();
-              ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-              for (let i = 1; i < stroke.points.length; i++) {
-                ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-              }
-              ctx.stroke();
-            }
-          });
-        }
-      }
+      configureCanvas();
+      redrawCanvas();
     };
 
     resizeCanvas();
@@ -68,9 +112,9 @@ export default function DrawingModal({
       window.removeEventListener("resize", resizeCanvas);
       clearTimeout(timeout);
     };
-  }, [strokes]);
+  }, []);
 
-  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>): Point => {
+  const getPointerPos = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
     if (!canvasRef.current) return { x: 0, y: 0 };
     const rect = canvasRef.current.getBoundingClientRect();
 
@@ -80,60 +124,63 @@ export default function DrawingModal({
     };
   };
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    setIsDrawing(true);
-    setCurrentStroke([getMousePos(e)]);
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const firstPoint = getPointerPos(e);
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    isDrawingRef.current = true;
+    currentStrokeRef.current = [firstPoint];
+    redrawCanvas();
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !ctxRef.current) return;
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current || !ctxRef.current) return;
+    e.preventDefault();
 
-    const pos = getMousePos(e);
-    setCurrentStroke((prev) => [...prev, pos]);
+    const pos = getPointerPos(e);
 
-    const ctx = ctxRef.current;
-    ctx.beginPath();
-    ctx.moveTo(
-      currentStroke[currentStroke.length - 1].x,
-      currentStroke[currentStroke.length - 1].y,
-    );
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
+    currentStrokeRef.current = [...currentStrokeRef.current, pos];
+
+    redrawCanvas();
   };
 
-  const stopDrawing = () => {
-    if (isDrawing && currentStroke.length > 0) {
-      setStrokes((prev) => [
-        ...prev,
-        {
-          points: [...currentStroke],
-          timestamp_ms: Date.now(),
-        },
-      ]);
-      setCurrentStroke([]);
+  const stopDrawing = (e?: React.PointerEvent<HTMLCanvasElement>) => {
+    if (e) {
+      e.preventDefault();
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
     }
-    setIsDrawing(false);
+
+    if (!isDrawingRef.current) return;
+
+    isDrawingRef.current = false;
+
+    if (currentStrokeRef.current.length > 0) {
+      const committedStroke: Stroke = {
+        points: [...currentStrokeRef.current],
+        timestamp_ms: Date.now(),
+      };
+      strokesRef.current = [...strokesRef.current, committedStroke];
+      currentStrokeRef.current = [];
+      redrawCanvas();
+    }
   };
 
   const clearCanvas = () => {
-    if (ctxRef.current && canvasRef.current) {
-      ctxRef.current.clearRect(
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height,
-      );
-    }
-    setStrokes([]);
-    setCurrentStroke([]);
+    strokesRef.current = [];
+    currentStrokeRef.current = [];
+    redrawCanvas();
+    isDrawingRef.current = false;
   };
 
   const handleSubmit = () => {
-    if (strokes.length === 0) {
+    if (strokesRef.current.length === 0) {
       alert("Please draw your answer first!");
       return;
     }
-    onSubmit(strokes);
+    onSubmit(strokesRef.current);
   };
 
   return (
@@ -167,7 +214,15 @@ export default function DrawingModal({
 
         {/* Feedback */}
         {feedback && (
-          <div className="mb-4 animate-fade-in rounded-xl border-2 border-blue-400 bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-center text-lg font-semibold text-white shadow-lg">
+          <div
+            className={`mb-4 animate-fade-in rounded-xl border-2 p-4 text-center text-lg font-semibold text-white shadow-lg ${
+              feedbackVariant === "issue"
+                ? "border-red-400 bg-gradient-to-r from-red-600 to-rose-500"
+                : feedbackVariant === "success"
+                  ? "border-emerald-400 bg-gradient-to-r from-emerald-600 to-green-500"
+                  : "border-amber-400 bg-gradient-to-r from-amber-600 to-yellow-500"
+            }`}
+          >
             {feedback}
           </div>
         )}
@@ -180,10 +235,11 @@ export default function DrawingModal({
           <canvas
             ref={canvasRef}
             className="h-full w-full cursor-crosshair"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerCancel={stopDrawing}
+            onPointerLeave={stopDrawing}
           />
         </div>
 
