@@ -68,22 +68,42 @@ class UserModel:
         """Return a plain-text summary of the student's performance for LLM context."""
         if not self._topics:
             return ""
+
         lines = ["Student performance profile:"]
         for topic_rec in self._topics.values():
-            total_attempts = sum(r.attempts for r in topic_rec.records.values())
-            total_correct = sum(r.correct for r in topic_rec.records.values())
-            total_hints = sum(r.hints for r in topic_rec.records.values())
-            note = " (struggling)" if total_attempts > 0 and total_hints >= total_attempts else ""
-            lines.append(
-                f"- {topic_rec.topic}: {total_attempts} attempts, "
-                f"{total_correct} correct, {total_hints} hint(s){note}"
-            )
-            for diff_rec in topic_rec.records.values():
-                if diff_rec.attempts > 0:
-                    lines.append(
-                        f"    {diff_rec.difficulty}: {diff_rec.attempts} attempts, "
-                        f"{diff_rec.correct} correct, {diff_rec.hints} hint(s)"
-                    )
+            lines.append(f"\n{topic_rec.topic}:")
+            for rec in topic_rec.records.values():
+                if rec.attempts == 0:
+                    continue
+
+                accuracy = rec.correct / rec.attempts
+                hint_rate = rec.hints / rec.attempts
+
+                # Classify skill level
+                if accuracy > 0.8 and hint_rate < 0.2:
+                    level = "too easy (solving without help)"
+                elif accuracy < 0.4:
+                    level = "too hard (failing most attempts)"
+                else:
+                    level = "appropriate difficulty (learning with support)"
+
+                # Detect behavioral patterns
+                patterns = []
+                if hint_rate > 0.8:
+                    patterns.append("asks for hints very often")
+                if rec.attempts >= 3 and accuracy < 0.3:
+                    patterns.append("stuck, failing repeatedly")
+                if rec.hints == 0 and accuracy > 0.9:
+                    patterns.append("solving confidently without help")
+
+                pattern_str = f" — {', '.join(patterns)}" if patterns else ""
+
+                lines.append(
+                    f"\t{rec.difficulty}: {level}, "
+                    f"{rec.correct}/{rec.attempts} correct, "
+                    f"{rec.hints} hint(s),{pattern_str}"
+                )
+
         return "\n".join(lines)
 
 
@@ -146,18 +166,23 @@ class UserModelService:
             return self._get_or_create_unlocked(session_id)
 
     def record_attempt(self, session_id: str, topic: str, correct: bool, difficulty: str) -> None:
-        """Record an attempt and immediately persist."""
+        """Record an attempt in memory. Call flush() to persist."""
         with self._lock:
             model = self._get_or_create_unlocked(session_id)
             model.record_attempt(topic=topic, correct=correct, difficulty=difficulty)
-            self._save(session_id, model)
 
     def record_hint(self, session_id: str, topic: str, difficulty: str) -> None:
-        """Record a hint request and immediately persist."""
+        """Record a hint request in memory. Call flush() to persist."""
         with self._lock:
             model = self._get_or_create_unlocked(session_id)
             model.record_hint(topic=topic, difficulty=difficulty)
-            self._save(session_id, model)
+
+    def flush(self, session_id: str) -> None:
+        """Persist the current in-memory model to TinyDB. Call on level advance."""
+        with self._lock:
+            model = self._models.get(session_id)
+            if model is not None:
+                self._save(session_id, model)
 
 
 user_model_service = UserModelService()

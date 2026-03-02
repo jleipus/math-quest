@@ -42,6 +42,7 @@ class PublicTask(BaseModel):
 
 
 CardType = Literal["attack", "heal", "shield"]
+AttackSubtype = Literal["magic", "bow", "sword", "axe"]
 
 
 class Card(BaseModel):
@@ -49,6 +50,7 @@ class Card(BaseModel):
     card_name: str
     card_power: int
     card_type: CardType
+    attack_subtype: AttackSubtype | None = None
     energy_cost: int
     task: PublicTask
 

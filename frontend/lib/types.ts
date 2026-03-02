@@ -24,8 +24,8 @@ export type HelpResponse = {
 // Game
 
 export type Difficulty = "easy" | "medium" | "hard";
-
 export type CardType = "attack" | "heal" | "shield";
+export type AttackSubtype = "magic" | "bow" | "sword" | "axe";
 
 export type InitGameRequest = {
   grade: string;
@@ -56,6 +56,7 @@ export type Card = {
   card_name: string;
   card_power: number;
   card_type: CardType;
+  attack_subtype: AttackSubtype | null;
   energy_cost: number;
   task: Task;
 };

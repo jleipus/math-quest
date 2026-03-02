@@ -1,6 +1,12 @@
 "use client";
 
-import type { Card as CardType, CardType as CardTypeValue, Difficulty } from "../lib/types";
+import Image from "next/image";
+import type {
+  Card as CardType,
+  CardType as CardTypeValue,
+  AttackSubtype,
+  Difficulty,
+} from "../lib/types";
 
 type Props = {
   card: CardType;
@@ -23,7 +29,6 @@ const cardTypeTheme: Record<
     bg: string;
     border: string;
     headerBg: string;
-    icon: string;
     label: string;
     powerBg: string;
     powerColor: string;
@@ -34,7 +39,6 @@ const cardTypeTheme: Record<
     bg: "#280a0a",
     border: "#c05030",
     headerBg: "#4a1010",
-    icon: "⚔️",
     label: "ATTACK",
     powerBg: "#c05030",
     powerColor: "#fff0ee",
@@ -44,7 +48,6 @@ const cardTypeTheme: Record<
     bg: "#0a1f0e",
     border: "#3a8a50",
     headerBg: "#0e3518",
-    icon: "💚",
     label: "HEAL",
     powerBg: "#2a7a40",
     powerColor: "#e0ffe8",
@@ -54,7 +57,6 @@ const cardTypeTheme: Record<
     bg: "#0a0e28",
     border: "#4060b0",
     headerBg: "#101840",
-    icon: "🛡️",
     label: "SHIELD",
     powerBg: "#2a4090",
     powerColor: "#dde8ff",
@@ -62,10 +64,31 @@ const cardTypeTheme: Record<
   },
 };
 
+const materialByDifficulty: Record<Difficulty, string> = {
+  easy: "wooden",
+  medium: "iron",
+  hard: "gold",
+};
+
+function getCardSprite(
+  cardType: CardTypeValue,
+  attackSubtype: AttackSubtype | null,
+  difficulty: Difficulty,
+): string {
+  const material = materialByDifficulty[difficulty];
+  if (cardType === "heal") return "/assets/items/potion.png";
+  if (cardType === "shield") return `/assets/items/shields/${material}_shield.png`;
+  // attack
+  const weapon = attackSubtype === "magic" ? "book" : (attackSubtype ?? "sword");
+  if (weapon === "book") return "/assets/items/book.png";
+  return `/assets/items/weapons/${material}_${weapon}.png`;
+}
+
 export default function Card({ card, index, onClick, playing, affordable, energyCost }: Props) {
   const theme = cardTypeTheme[card.card_type] ?? cardTypeTheme.attack;
   const diffColor = difficultyColor[card.task.difficulty];
   const isDisabled = playing || !affordable;
+  const sprite = getCardSprite(card.card_type, card.attack_subtype, card.task.difficulty);
 
   return (
     <button
@@ -105,14 +128,20 @@ export default function Card({ card, index, onClick, playing, affordable, energy
         style={{
           background: theme.headerBg,
           borderBottom: `2px solid ${theme.border}`,
-          padding: "8px 10px",
+          padding: "12px 10px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <div className="flex items-center gap-1">
-          <span style={{ fontSize: 14 }}>{theme.icon}</span>
+        <div className="flex items-center gap-2">
+          <Image
+            src={sprite}
+            alt={theme.label}
+            width={28}
+            height={28}
+            style={{ imageRendering: "pixelated" }}
+          />
           <span
             className="font-pixel"
             style={{ fontSize: "0.5rem", color: theme.powerColor, letterSpacing: "0.06em" }}
@@ -121,28 +150,14 @@ export default function Card({ card, index, onClick, playing, affordable, energy
           </span>
         </div>
 
-        {/* Keyboard shortcut badge */}
-        <span
-          className="font-pixel"
-          style={{
-            fontSize: "0.5rem",
-            background: "rgba(0,0,0,0.45)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            color: affordable ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)",
-            padding: "1px 5px",
-          }}
-        >
-          {index}
-        </span>
-
         {/* Energy cost pips */}
         <div className="flex gap-1 items-center">
           {Array.from({ length: energyCost }).map((_, i) => (
             <div
               key={i}
               style={{
-                width: 8,
-                height: 8,
+                width: 12,
+                height: 12,
                 background: affordable ? "#f5c842" : "#4a2040",
                 border: "1px solid #c89e2a",
               }}
@@ -153,7 +168,7 @@ export default function Card({ card, index, onClick, playing, affordable, energy
 
       {/* Body */}
       <div style={{ padding: "10px 10px 0", flex: 1, display: "flex", flexDirection: "column" }}>
-        <div className="mb-2">
+        <div className="mb-2 flex items-center gap-2 flex-wrap">
           <span
             className="font-pixel"
             style={{
@@ -164,6 +179,20 @@ export default function Card({ card, index, onClick, playing, affordable, energy
             }}
           >
             {card.task.difficulty.toUpperCase()}
+          </span>
+          <span
+            className="font-pixel"
+            style={{
+              fontSize: "0.5rem",
+              color: "var(--px-text-dim)",
+              opacity: 0.8,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              maxWidth: 120,
+            }}
+          >
+            {card.task.topic}
           </span>
         </div>
 

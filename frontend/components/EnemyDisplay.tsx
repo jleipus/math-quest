@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 type Props = {
   hp: number;
   maxHp: number;
@@ -41,12 +43,17 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 64,
           imageRendering: "pixelated",
         }}
         aria-label="Enemy"
       >
-        👾
+        <Image
+          src="/assets/items/skull.png"
+          alt="Enemy"
+          width={80}
+          height={80}
+          style={{ imageRendering: "pixelated" }}
+        />
       </div>
 
       {/* ENEMY label */}

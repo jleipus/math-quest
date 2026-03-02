@@ -4,25 +4,56 @@ from fractions import Fraction
 from threading import Lock
 from typing import Generator
 from uuid import UUID, uuid4
+from concurrent.futures import ThreadPoolExecutor
 
 from backend.config import get_settings
-from backend.models.game import Card, CardType, PublicTask, Task, InitGameResponse, DrawHandResponse
+from backend.models.game import Card, CardType, AttackSubtype, PublicTask, Task, InitGameResponse, DrawHandResponse
 
 
-_DIFFICULTIES = ["easy", "medium", "hard"]
-
-# Card names grouped by type
-_ATTACK_NAMES = [
+# Card names grouped by attack subtype
+_MAGIC_NAMES = [
     "Fireball",
     "Ice Lance",
-    "Thunder Strike",
     "Shadow Bolt",
-    "Dragon Breath",
     "Arcane Missile",
-    "Poison Dart",
     "Lava Burst",
-    "Chain Lightning",
     "Void Rift",
+    "Frost Nova",
+    "Chain Lightning",
+]
+
+_BOW_NAMES = [
+    "Poison Dart",
+    "Eagle Eye",
+    "Piercing Shot",
+    "Volley",
+    "Snipe",
+    "Hunters Mark",
+]
+
+_SWORD_NAMES = [
+    "Thunder Strike",
+    "Dragon Breath",
+    "Slash",
+    "Riposte",
+    "Whirlwind",
+    "Cleave",
+]
+
+_AXE_NAMES = [
+    "Skull Splitter",
+    "Ravage",
+    "Headbutt",
+    "Reckless Swing",
+    "Bloodlust",
+    "Brutal Strike",
+]
+
+_ATTACK_SUBTYPES: list[tuple[AttackSubtype, list[str]]] = [
+    ("magic", _MAGIC_NAMES),
+    ("bow", _BOW_NAMES),
+    ("sword", _SWORD_NAMES),
+    ("axe", _AXE_NAMES),
 ]
 
 _HEAL_NAMES = [
@@ -157,13 +188,7 @@ class GameService:
 
     @contextmanager
     def get_session_locked(self, session_id: str) -> Generator[GameSession | None, None, None]:
-        """Context manager that returns the session while holding its per-session lock.
-
-        Yields ``None`` when the session does not exist.  The per-session lock
-        prevents two concurrent requests for the *same* session from racing on
-        shared mutable state (hand, HP, shield, etc.).  Different sessions run
-        fully in parallel because each has its own lock.
-        """
+        """Context manager that returns the session while holding its per-session lock."""
         session = self.get_session(session_id)
         if session is None:
             yield None
@@ -215,24 +240,27 @@ class GameService:
             slots.append((topic, difficulty))
 
         all_tasks: list[Task] = []
-        for topic, difficulty in slots:
+
+        def worker(topic: str, difficulty: str) -> Task:
             try:
                 curriculum_context = curriculum_service.retrieve_context(grade=grade, topic=topic, question=topic)
             except RuntimeError:
                 curriculum_context = ""
-            all_tasks.extend(
-                llm_service.generate_tasks(
-                    grade=grade,
-                    topic=topic,
-                    difficulty=difficulty,
-                    count=1,
-                    curriculum_context=curriculum_context,
-                    profile_context=profile_context,
-                    session_id=sid,
-                )
+
+            return llm_service.generate_task(
+                grade=grade,
+                topic=topic,
+                difficulty=difficulty,
+                curriculum_context=curriculum_context,
+                profile_context=profile_context,
+                session_id=sid,
             )
-        # Store tasks on the session so the agent router can look them up
-        # without a shared global registry.
+
+        with ThreadPoolExecutor(max_workers=len(slots)) as executor:
+            futures = [executor.submit(worker, topic, diff) for topic, diff in slots]
+            all_tasks = [f.result() for f in futures]
+
+        # Store tasks on the session so the agent router can look them up without a shared global registry.
         for task in all_tasks:
             session.store_task(task)
         session._rng.shuffle(all_tasks)
@@ -253,8 +281,10 @@ class GameService:
             power_low, power_high = _POWER_BY_DIFFICULTY.get(task.difficulty, (10, 20))
             card_power = session._rng.randint(power_low, power_high)
 
+            attack_subtype: AttackSubtype | None = None
             if card_type == "attack":
-                card_name = session._rng.choice(_ATTACK_NAMES)
+                attack_subtype, name_pool = session._rng.choice(_ATTACK_SUBTYPES)
+                card_name = session._rng.choice(name_pool)
             elif card_type == "heal":
                 card_name = session._rng.choice(_HEAL_NAMES)
             else:
@@ -266,6 +296,7 @@ class GameService:
                 card_name=card_name,
                 card_power=card_power,
                 card_type=card_type,
+                attack_subtype=attack_subtype,
                 energy_cost=energy_cost,
                 task=PublicTask(
                     task_id=task.task_id,
@@ -298,7 +329,9 @@ class GameService:
         return session.player_hp, raw_damage, absorbed
 
     def _advance_floor(self, session: GameSession) -> None:
-        """Advance to the next floor, increase enemy HP and damage."""
+        """Advance to the next floor, increase enemy HP and damage, and flush the user model."""
+        from backend.services.user_model import user_model_service
+
         session.floor += 1
         base_hp = get_settings().enemy_start_hp
         new_hp = int(base_hp * (1.2 ** (session.floor - 1)))
@@ -307,6 +340,8 @@ class GameService:
 
         floor_bonus = (session.floor - 1) * 3
         session.enemy_next_damage = session._rng.randint(10 + floor_bonus, 20 + floor_bonus)
+
+        user_model_service.flush(str(session.session_id))
 
     def apply_card(self, session: GameSession, card: Card) -> tuple[int, int]:
         """Apply a card's effect."""
