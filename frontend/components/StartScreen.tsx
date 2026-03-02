@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchGrades, initGame, drawHand } from "../lib/api";
@@ -49,9 +50,7 @@ export default function StartScreen() {
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
       {/* Title */}
       <div className="mb-10 text-center">
-        <div className="mb-4 text-7xl" style={{ imageRendering: "pixelated" }}>
-          ⚔️
-        </div>
+        <Image src="/logo.png" alt="MathQuest" width={120} height={120} className="mb-4 mx-auto" />
         <h1
           className="font-pixel text-4xl md:text-5xl leading-tight"
           style={{ color: "var(--px-gold)", textShadow: "3px 3px 0 #7a3d00, 6px 6px 0 #1d0a1a" }}

@@ -83,8 +83,6 @@ class CurriculumService:
         k = top_k if top_k is not None else settings.rag_top_k
 
         collection = self._get_chroma_collection()
-        if collection is None:
-            raise RuntimeError("ChromaDB is unavailable. Run index_curriculum first.")
 
         results = collection.query(query_texts=[f"{grade} {topic}: {question}"], n_results=k)
         documents = results.get("documents", [[]])[0]
@@ -104,22 +102,22 @@ class CurriculumService:
     def _load_tree(self) -> list[Grade]:
         """Load the curriculum tree from the shared TinyDB connection.
 
-        Returns:
-            List of ``Grade`` objects, empty list if database is missing.
+        Raises:
+            RuntimeError: If the database cannot be opened or parsed.
         """
         try:
             with self._lock:
                 db = self._get_db()
                 rows = db.all()
             return [Grade.model_validate(row) for row in rows]
-        except Exception:
-            return []
+        except Exception as exc:
+            raise RuntimeError(f"Failed to load curriculum tree: {exc}") from exc
 
     def _get_chroma_collection(self) -> Any:
         """Return the shared ChromaDB curriculum collection.
 
-        Returns:
-            ChromaDB collection, or ``None`` if unavailable.
+        Raises:
+            RuntimeError: If ChromaDB cannot be initialised.
         """
         try:
             if self._chroma_client is None:
@@ -129,10 +127,9 @@ class CurriculumService:
                 with self._lock:
                     if self._chroma_client is None:  # double-checked locking
                         self._chroma_client = chromadb.PersistentClient(path=settings.chroma_db_path)
-            # get_or_create_collection is thread-safe in chromadb
             return self._chroma_client.get_or_create_collection("curriculum")
-        except Exception:
-            return None
+        except Exception as exc:
+            raise RuntimeError(f"Failed to initialise ChromaDB: {exc}") from exc
 
 
 curriculum_service = CurriculumService()

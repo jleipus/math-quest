@@ -2,3 +2,6 @@
 .python-version
 data/*
 logs/*
+terraform/.terraform/
+terraform/terraform.tfstate*
+terraform/.terraform.lock.hcl
