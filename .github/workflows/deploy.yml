@@ -1,0 +1,94 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-north1
+  BACKEND_SERVICE: my-backend
+  FRONTEND_SERVICE: my-frontend
+  GAR_REPO: my-app
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and push backend
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.BACKEND_SERVICE }}:${{ github.sha }}
+          docker build -t $IMAGE ./backend
+          docker push $IMAGE
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.BACKEND_SERVICE }}:${{ github.sha }}
+          gcloud run deploy ${{ env.BACKEND_SERVICE }} \
+            --image $IMAGE \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --set-env-vars "DAIS_LLM_PROVIDER=${{ secrets.DAIS_LLM_PROVIDER }},DAIS_CLAUDE_API_KEY=${{ secrets.DAIS_CLAUDE_API_KEY }},DAIS_GEMINI_API_KEY=${{ secrets.DAIS_GEMINI_API_KEY }}"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} \
+            --region ${{ env.REGION }} --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      - name: Build and push frontend
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.FRONTEND_SERVICE }}:${{ github.sha }}
+          docker build \
+            --build-arg "NEXT_PUBLIC_API_URL=${{ steps.backend-url.outputs.url }}/api/v1" \
+            -t $IMAGE ./frontend
+          docker push $IMAGE
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          IMAGE=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.FRONTEND_SERVICE }}:${{ github.sha }}
+          gcloud run deploy ${{ env.FRONTEND_SERVICE }} \
+            --image $IMAGE \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 3000
+
+      - name: Update backend CORS with frontend URL
+        run: |
+          FRONTEND_URL=$(gcloud run services describe ${{ env.FRONTEND_SERVICE }} \
+            --region ${{ env.REGION }} --format 'value(status.url)')
+          gcloud run services update ${{ env.BACKEND_SERVICE }} \
+            --region ${{ env.REGION }} \
+            --update-env-vars "DAIS_ALLOWED_ORIGINS=[\"$FRONTEND_URL\"]"

@@ -1,27 +1,28 @@
 import json
-import sys
 from datetime import datetime, timezone
 from threading import Lock
+from pathlib import Path
 
 _lock = Lock()
+_output_file: Path | None = None
+
+
+def set_log_file(path: str | Path) -> None:
+    global _output_file
+    _output_file = Path(path)
+    _output_file.parent.mkdir(parents=True, exist_ok=True)
 
 
 def log(message: str, extra: dict | None = None) -> None:
-    """Emit one structured log line to stdout.
-
-    Args:
-        message: Short human-readable description of the event.
-        extra:   Optional dict of additional fields.
-    """
     record: dict = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "msg": message,
     }
     if extra:
-        for k, v in extra.items():
-            record[k] = v
+        record.update(extra)
 
-    line = json.dumps(record, ensure_ascii=False)
+    line = json.dumps(record, ensure_ascii=False) + "\n"
     with _lock:
-        sys.stdout.write(line + "\n")
-        sys.stdout.flush()
+        if _output_file:
+            with open(_output_file, "a") as f:
+                f.write(line)

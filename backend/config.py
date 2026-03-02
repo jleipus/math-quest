@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     chroma_db_path: str = "./data/chroma"
     tiny_db_path: str = "./data/curriculum_tree.json"
     user_model_db_path: str = "./data/user_models.json"
+    llm_log_path: str | None = None
+
     allowed_origins: list[str] = ["http://localhost:3000"]
 
 
