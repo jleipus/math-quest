@@ -79,9 +79,9 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
       });
       if (result.correct) {
         setSolved(true);
-        setFeedback({ type: "success", text: result.message });
+        setFeedback({ type: "success", text: "Correct!" });
       } else {
-        setFeedback({ type: "error", text: result.message });
+        setFeedback({ type: "error", text: "Not quite - Try again." });
       }
     } catch {
       setFeedback({ type: "error", text: "Something went wrong. Try again." });

@@ -179,10 +179,12 @@ export default function UserModelModal({ sessionId, onClose }: Props) {
                         <span
                           key={r.difficulty}
                           className="font-pixel"
-                          style={{ fontSize: "0.6rem", color: diffColor[r.difficulty] ?? "var(--px-text-dim)" }}
+                          style={{
+                            fontSize: "0.6rem",
+                            color: diffColor[r.difficulty] ?? "var(--px-text-dim)",
+                          }}
                         >
                           {r.difficulty.toUpperCase()} {r.correct}/{r.attempts}
-                          {r.hints > 0 && <span style={{ color: "#a080c0" }}> {r.hints}h</span>}
                         </span>
                       ))}
                     </div>

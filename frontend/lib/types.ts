@@ -88,7 +88,6 @@ export type AnswerRequest = {
 export type AnswerResponse = {
   correct: boolean;
   card_id: string;
-  message: string;
 };
 
 export type PlayCardRequest = {

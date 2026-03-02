@@ -1,0 +1,164 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "datasource", "id": "loki", "name": "Loki", "version": "1.0.0" }
+  ],
+  "title": "MathQuest",
+  "uid": "mathquest-main",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "session_id",
+        "label": "Session ID",
+        "type": "textbox",
+        "current": { "value": "" },
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP requests / min",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service=\"backend\", msg=\"http_request\"} [1m])) by (method)",
+          "legendFormat": "{{method}}",
+          "refId": "A"
+        }
+      ],
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "title": "HTTP error rate (4xx + 5xx) / min",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service=\"backend\", msg=\"http_request\"} | json | status >= 400 [1m]))",
+          "legendFormat": "errors",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "LLM calls / min",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service=\"backend\", msg=\"llm_request\"} [1m])) by (call)",
+          "legendFormat": "{{call}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "LLM errors / min",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(rate({service=\"backend\", msg=\"llm_error\"} [1m])) by (call)",
+          "legendFormat": "{{call}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Active sessions (unique session_ids, last 10 min)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count(count_over_time({service=\"backend\", msg=\"http_request\"} [10m]) by (session_id))",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 6,
+      "title": "Total HTTP requests (window)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 16, "w": 6, "h": 4 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service=\"backend\", msg=\"http_request\"} [$__range]))",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 7,
+      "title": "Total LLM calls (window)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 16, "w": 6, "h": 4 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service=\"backend\", msg=\"llm_request\"} [$__range]))",
+          "refId": "A"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 8,
+      "title": "Total LLM errors (window)",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 16, "w": 6, "h": 4 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "sum(count_over_time({service=\"backend\", msg=\"llm_error\"} [$__range]))",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Log explorer – filter by session",
+      "description": "Set the Session ID variable at the top to filter to a single player.",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 12 },
+      "datasource": "Loki",
+      "options": { "showTime": true, "wrapLogMessage": true, "dedupStrategy": "none" },
+      "targets": [
+        {
+          "expr": "{service=\"backend\"} | json | session_id=~\"${session_id:pipe}.*\" | session_id != \"\"",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

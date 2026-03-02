@@ -1,4 +1,5 @@
 import random
+from threading import Lock
 from typing import Any
 
 from backend.config import get_settings
@@ -7,6 +8,11 @@ from backend.models.curriculum import Grade
 
 class CurriculumService:
     """Provides curriculum data from TinyDB (tree) and ChromaDB (RAG)."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._db: Any = None  # TinyDB instance
+        self._chroma_client: Any = None  # ChromaDB client
 
     def get_grades(self) -> list[str]:
         """Return grade names from TinyDB.
@@ -86,33 +92,45 @@ class CurriculumService:
             raise RuntimeError(f"No curriculum context found for {grade!r} / {topic!r}.")
         return "\n\n".join(documents)
 
+    def _get_db(self) -> Any:
+        """Return the shared TinyDB instance, opening it lazily on first call."""
+        if self._db is None:
+            from tinydb import TinyDB
+
+            settings = get_settings()
+            self._db = TinyDB(settings.tiny_db_path)
+        return self._db
+
     def _load_tree(self) -> list[Grade]:
-        """Load the curriculum tree from TinyDB.
+        """Load the curriculum tree from the shared TinyDB connection.
 
         Returns:
             List of ``Grade`` objects, empty list if database is missing.
         """
         try:
-            from tinydb import TinyDB
-
-            settings = get_settings()
-            db = TinyDB(settings.tiny_db_path)
-            return [Grade.model_validate(row) for row in db.all()]
+            with self._lock:
+                db = self._get_db()
+                rows = db.all()
+            return [Grade.model_validate(row) for row in rows]
         except Exception:
             return []
 
     def _get_chroma_collection(self) -> Any:
-        """Open the ChromaDB curriculum collection.
+        """Return the shared ChromaDB curriculum collection.
 
         Returns:
             ChromaDB collection, or ``None`` if unavailable.
         """
         try:
-            import chromadb
+            if self._chroma_client is None:
+                import chromadb
 
-            settings = get_settings()
-            client = chromadb.PersistentClient(path=settings.chroma_db_path)
-            return client.get_or_create_collection("curriculum")
+                settings = get_settings()
+                with self._lock:
+                    if self._chroma_client is None:  # double-checked locking
+                        self._chroma_client = chromadb.PersistentClient(path=settings.chroma_db_path)
+            # get_or_create_collection is thread-safe in chromadb
+            return self._chroma_client.get_or_create_collection("curriculum")
         except Exception:
             return None
 

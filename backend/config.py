@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "MathQuest API"
     app_version: str = "0.1.0"
 
-    llm_provider: str = "mock"
+    llm_provider: str = "claude"
 
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.0-flash"
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     claude_api_key: str | None = None
     claude_model: str = "claude-sonnet-4-5"
+    claude_api_base: str = "https://api.anthropic.com/v1"
 
     player_start_hp: int = 100
     enemy_start_hp: int = 100
@@ -29,8 +30,6 @@ class Settings(BaseSettings):
     chroma_db_path: str = "./data/chroma"
     tiny_db_path: str = "./data/curriculum_tree.json"
     user_model_db_path: str = "./data/user_models.json"
-    llm_log_path: str = "./logs/llm_requests.log"
-
     allowed_origins: list[str] = ["http://localhost:3000"]
 
 

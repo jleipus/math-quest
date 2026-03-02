@@ -67,7 +67,6 @@ class AnswerRequest(BaseModel):
 class AnswerResponse(BaseModel):
     correct: bool
     card_id: UUID
-    message: str
 
 
 class PlayCardRequest(BaseModel):

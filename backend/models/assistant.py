@@ -21,4 +21,4 @@ class HelpRequest(BaseModel):
 
 class HelpResponse(BaseModel):
     guiding_question: str
-    context_used: str
+    prompt_used: str

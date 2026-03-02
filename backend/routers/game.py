@@ -28,32 +28,33 @@ def init_game(payload: InitGameRequest) -> InitGameResponse:
 @router.post("/draw", response_model=DrawHandResponse)
 def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
     settings = get_settings()
-    session = game_service.get_session(str(payload.session_id))
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    try:
-        return game_service.draw_hand(session, hand_size=settings.default_hand_size)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+    with game_service.get_session_locked(str(payload.session_id)) as session:
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        try:
+            return game_service.draw_hand(session, hand_size=settings.default_hand_size)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
 
 
 @router.post("/answer", response_model=AnswerResponse)
 def answer_task(payload: AnswerRequest) -> AnswerResponse:
-    session = game_service.get_session(str(payload.session_id))
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    with game_service.get_session_locked(str(payload.session_id)) as session:
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    task_id = str(payload.task_id)
-    card = session.get_card_for_task(task_id)
-    if card is None:
-        raise HTTPException(status_code=404, detail="Task not found in this session")
+        task_id = str(payload.task_id)
+        card = session.get_card_for_task(task_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Task not found in this session")
 
-    expected = session.get_expected_answer(task_id)
-    if expected is None:
-        raise HTTPException(status_code=500, detail="Expected answer missing")
+        expected = session.get_expected_answer(task_id)
+        if expected is None:
+            raise HTTPException(status_code=500, detail="Expected answer missing")
 
-    correct = game_service.check_answer(payload.answer, expected)
+        correct = game_service.check_answer(payload.answer, expected)
 
+    # Record attempt outside the session lock, UserModelService has its own lock
     user_model_service.record_attempt(
         session_id=str(payload.session_id),
         topic=card.task.topic,
@@ -62,34 +63,26 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
     )
 
     if correct:
-        return AnswerResponse(
-            correct=True,
-            card_id=card.card_id,
-            message="Correct!",
-        )
+        return AnswerResponse(correct=True, card_id=card.card_id)
 
-    return AnswerResponse(
-        correct=False,
-        card_id=card.card_id,
-        message="Not quite - try again!",
-    )
+    return AnswerResponse(correct=False, card_id=card.card_id)
 
 
 @router.post("/play_card", response_model=PlayCardResponse)
 def play_card(payload: PlayCardRequest) -> PlayCardResponse:
-    session = game_service.get_session(str(payload.session_id))
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    with game_service.get_session_locked(str(payload.session_id)) as session:
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    card_id = str(payload.card_id)
-    card = session.get_card(card_id)
-    if card is None:
-        raise HTTPException(status_code=404, detail="Card not found in this session")
+        card_id = str(payload.card_id)
+        card = session.get_card(card_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Card not found in this session")
 
-    enemy_hp, player_hp = game_service.apply_card(session, card)
-    session.remove_card(card_id)
+        enemy_hp, player_hp = game_service.apply_card(session, card)
+        session.remove_card(card_id)
 
-    enemy_defeated = session.enemy_hp <= 0
+        enemy_defeated = session.enemy_hp <= 0
 
     return PlayCardResponse(
         enemy_hp=enemy_hp,
@@ -103,17 +96,17 @@ def play_card(payload: PlayCardRequest) -> PlayCardResponse:
 @router.post("/end_turn", response_model=EndTurnResponse)
 def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
     settings = get_settings()
-    session = game_service.get_session(str(payload.session_id))
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    with game_service.get_session_locked(str(payload.session_id)) as session:
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-    # If enemy hp <= 0, enemy_attack advances the floor and spawns new enemy
-    player_hp, raw_damage, absorbed = game_service.enemy_attack(session)
+        # If enemy hp <= 0, enemy_attack advances the floor and spawns new enemy
+        player_hp, raw_damage, absorbed = game_service.enemy_attack(session)
 
-    try:
-        draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        try:
+            draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc))
 
     return EndTurnResponse(
         player_hp=player_hp,
