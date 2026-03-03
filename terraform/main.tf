@@ -23,14 +23,20 @@ resource "google_cloud_run_v2_service" "backend" {
 
   deletion_protection = false
 
-  scaling {
-    min_instance_count = 1
-    max_instance_count = 1
-  }
-
   template {
+    scaling {
+      min_instance_count = 1
+      max_instance_count = 1
+    }
+
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/mathquest/mathquest-backend:${var.image_tag}"
+
+      resources {
+        limits = {
+          memory = "1Gi"
+        }
+      }
 
       ports {
         container_port = 8080
@@ -58,11 +64,10 @@ resource "google_cloud_run_v2_service" "frontend" {
 
   deletion_protection = false
 
-  scaling {
-    max_instance_count = 3
-  }
-
   template {
+    scaling {
+      max_instance_count = 3
+    }
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/mathquest/mathquest-frontend:${var.image_tag}"
