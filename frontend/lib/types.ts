@@ -52,6 +52,7 @@ export type Task = {
   grade: string;
   topic: string;
   difficulty: Difficulty;
+  expected_answer: string;
 };
 
 export type Card = {
@@ -92,6 +93,7 @@ export type AnswerRequest = {
 export type AnswerResponse = {
   correct: boolean;
   card_id: string;
+  card_power: number;
 };
 
 export type PlayCardRequest = {

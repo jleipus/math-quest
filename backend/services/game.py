@@ -1,6 +1,7 @@
+import math
 import random
 import time
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from contextlib import contextmanager
 from fractions import Fraction
 from threading import Lock
@@ -9,7 +10,7 @@ from uuid import UUID, uuid4
 from concurrent.futures import ThreadPoolExecutor
 
 from backend.config import get_settings
-from backend.models.game import Card, CardType, AttackSubtype, PublicTask, Task, InitGameResponse, DrawHandResponse
+from backend.models.game import Card, CardType, AttackSubtype, Task, InitGameResponse, DrawHandResponse
 
 
 # Card names grouped by attack subtype
@@ -109,6 +110,7 @@ class GameSession:
         self._task_to_card: dict[str, str] = {}
         self._expected_answers: dict[str, str] = {}
         self._tasks: dict[str, Task] = {}  # full Task objects, keyed by task_id
+        self._wrong_attempts: dict[str, int] = {}  # card_id -> wrong attempt count
         # Each session gets its own RNG so concurrent sessions don't interfere
         self._rng = random.Random()
         # Per-session lock to guard against concurrent requests on the same session
@@ -145,6 +147,17 @@ class GameSession:
     def remove_card(self, card_id: str) -> None:
         self.hand = [c for c in self.hand if str(c.card_id) != card_id]
         self._rebuild_task_map()
+
+    def record_wrong_attempt(self, card_id: str) -> None:
+        """Increment the wrong-attempt counter for a card."""
+        self._wrong_attempts[card_id] = self._wrong_attempts.get(card_id, 0) + 1
+
+    def penalised_power(self, card: Card) -> int:
+        """Return card_power reduced by 10% per wrong attempt, capped at 50% reduction."""
+        base = card.card_power
+        wrongs = min(self._wrong_attempts.get(str(card.card_id), 0), 5)
+        reduction = math.ceil(base * 0.10) * wrongs
+        return max(base - reduction, math.ceil(base * 0.50))
 
 
 _MAX_SESSIONS = 100
@@ -250,12 +263,13 @@ class GameService:
         user_model = user_model_service.get_or_create(sid)
         profile_context = user_model.get_profile_context()
 
-        # If user model is not empty, generate card slots
+        grade_topics = curriculum_service.get_all_topics(grade)
+
+        # If user model is not empty, let the LLM pick topics and difficulties
         slots = []
         if len(user_model.records) > 0:
-            all_topics = curriculum_service.get_all_topics(grade)
             slots = llm_service.select_hand_slots(
-                topics=all_topics,
+                topics=grade_topics,
                 profile_context=profile_context,
                 hand_size=hand_size,
                 session_id=sid,
@@ -264,34 +278,52 @@ class GameService:
         # Fallback: fill any missing slots with random topic + balanced difficulties
         fallback_difficulties = ["easy", "easy", "medium", "medium", "hard"]
         while len(slots) < hand_size:
-            topic = curriculum_service.get_random_topic(grade)
+            topic = session._rng.choice(grade_topics)
             difficulty = fallback_difficulties[len(slots) % len(fallback_difficulties)]
             slots.append((topic, difficulty))
 
-        all_tasks: list[Task] = []
+        # Group slots by topic so all cards for the same topic are generated in one LLM call.
+        topic_to_difficulties: dict[str, list[str]] = defaultdict(list)
 
-        def worker(topic: str, difficulty: str) -> Task:
+        # Track original slot order so we can restore it after parallel generation.
+        slot_indices: dict[str, list[int]] = defaultdict(list)
+        for idx, (topic, difficulty) in enumerate(slots):
+            topic_to_difficulties[topic].append(difficulty)
+            slot_indices[topic].append(idx)
+
+        def topic_worker(topic: str, difficulties: list[str]) -> list[Task]:
             try:
                 curriculum_context = curriculum_service.retrieve_context(grade=grade, topic=topic, question=topic)
             except RuntimeError:
                 curriculum_context = ""
 
-            return llm_service.generate_task(
+            return llm_service.generate_tasks_for_topic(
                 grade=grade,
                 topic=topic,
-                difficulty=difficulty,
+                difficulties=difficulties,
                 curriculum_context=curriculum_context,
                 profile_context=profile_context,
                 session_id=sid,
             )
 
-        with ThreadPoolExecutor(max_workers=len(slots)) as executor:
-            futures = [executor.submit(worker, topic, diff) for topic, diff in slots]
-            all_tasks = [f.result() for f in futures]
+        unique_topics = list(topic_to_difficulties.keys())
+        with ThreadPoolExecutor(max_workers=len(unique_topics)) as executor:
+            futures_map = {
+                topic: executor.submit(topic_worker, topic, topic_to_difficulties[topic]) for topic in unique_topics
+            }
 
-        # Store tasks on the session so the agent router can look them up without a shared global registry.
-        for task in all_tasks:
-            session.store_task(task)
+        # Reconstruct all_tasks in original slot order.
+        all_tasks: list[Task] = [None] * len(slots)  # type: ignore[list-item]
+        for topic, future in futures_map.items():
+            tasks = future.result()
+            indices = slot_indices[topic]
+            for i, task in zip(indices, tasks):
+                all_tasks[i] = task
+                session.store_task(task)
+
+        # Drop any slots the LLM failed to fill
+        all_tasks = [t for t in all_tasks if t is not None]
+
         session._rng.shuffle(all_tasks)
 
         expected_answers: dict[str, str] = {}
@@ -327,12 +359,13 @@ class GameService:
                 card_type=card_type,
                 attack_subtype=attack_subtype,
                 energy_cost=energy_cost,
-                task=PublicTask(
+                task=Task(
                     task_id=task.task_id,
                     question=task.question,
                     grade=task.grade,
                     topic=task.topic,
                     difficulty=task.difficulty,
+                    expected_answer=task.expected_answer,
                 ),
             )
             expected_answers[str(task.task_id)] = task.expected_answer
@@ -373,14 +406,15 @@ class GameService:
         user_model_service.flush(str(session.session_id))
 
     def apply_card(self, session: GameSession, card: Card) -> tuple[int, int]:
-        """Apply a card's effect."""
+        """Apply a card's effect using the penalised power."""
+        power = session.penalised_power(card)
         if card.card_type == "attack":
-            session.enemy_hp = max(0, session.enemy_hp - card.card_power)
+            session.enemy_hp = max(0, session.enemy_hp - power)
         elif card.card_type == "heal":
             settings = get_settings()
-            session.player_hp = min(settings.player_start_hp, session.player_hp + card.card_power)
+            session.player_hp = min(settings.player_start_hp, session.player_hp + power)
         elif card.card_type == "shield":
-            session.shield += card.card_power
+            session.shield += power
 
         return session.enemy_hp, session.player_hp
 

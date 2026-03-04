@@ -83,8 +83,20 @@ class CurriculumService:
         k = top_k if top_k is not None else settings.rag_top_k
 
         collection = self._get_chroma_collection()
+        query_text = f"{topic}: {question}"
 
-        results = collection.query(query_texts=[f"{grade} {topic}: {question}"], n_results=k)
+        # Filter to the requested grade so chunks from other grades are excluded.
+        # Fall back to an unfiltered query if the grade has fewer than k indexed chunks
+        # (ChromaDB raises an error when n_results exceeds the filtered result set size).
+        try:
+            results = collection.query(
+                query_texts=[query_text],
+                n_results=k,
+                where={"grade": grade},
+            )
+        except Exception:
+            results = collection.query(query_texts=[query_text], n_results=k)
+
         documents = results.get("documents", [[]])[0]
         if not documents:
             raise RuntimeError(f"No curriculum context found for {grade!r} / {topic!r}.")

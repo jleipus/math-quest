@@ -31,16 +31,6 @@ class Task(BaseModel):
     expected_answer: str
 
 
-class PublicTask(BaseModel):
-    """Public task model, excluding expected_answer."""
-
-    task_id: UUID
-    question: str
-    grade: str
-    topic: str
-    difficulty: str
-
-
 CardType = Literal["attack", "heal", "shield"]
 AttackSubtype = Literal["magic", "bow", "sword", "axe"]
 
@@ -52,7 +42,7 @@ class Card(BaseModel):
     card_type: CardType
     attack_subtype: AttackSubtype | None = None
     energy_cost: int
-    task: PublicTask
+    task: Task
 
 
 class DrawHandResponse(BaseModel):
@@ -69,6 +59,7 @@ class AnswerRequest(BaseModel):
 class AnswerResponse(BaseModel):
     correct: bool
     card_id: UUID
+    card_power: int
 
 
 class PlayCardRequest(BaseModel):

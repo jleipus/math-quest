@@ -65,7 +65,7 @@ export default function StartScreen() {
             textShadow: "2px 2px 0 #1d0a1a, 4px 4px 0 #0a0008",
           }}
         >
-          Solve tasks. Defeat the enemy.
+          An AI-guided math learning experience
         </p>
       </div>
 
