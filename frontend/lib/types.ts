@@ -14,6 +14,9 @@ export type HelpRequest = {
   session_id: string;
   task_id: string;
   student_work?: Stroke[];
+  canvas_width?: number;
+  canvas_height?: number;
+  previous_questions?: string[];
 };
 
 export type HelpResponse = {

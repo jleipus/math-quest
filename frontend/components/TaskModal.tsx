@@ -94,10 +94,14 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
     if (!game || !canvasRef.current) return;
     setHelpLoading(true);
     try {
+      const { width, height } = canvasRef.current.getSize();
       const result = await requestHelp({
         session_id: game.session_id,
         task_id: card.task.task_id,
         student_work: canvasRef.current.getStrokes(),
+        canvas_width: width,
+        canvas_height: height,
+        previous_questions: messages.length > 0 ? messages : undefined,
       });
       setMessages((prev) => [...prev, result.guiding_question]);
     } catch (e) {

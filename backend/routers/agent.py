@@ -20,7 +20,7 @@ def request_help(payload: HelpRequest) -> HelpResponse:
 
     image_png: bytes | None = None
     if payload.student_work:
-        image_png = rasterize_strokes_to_png(payload.student_work)
+        image_png = rasterize_strokes_to_png(payload.student_work, payload.canvas_width, payload.canvas_height)
 
     # Get user profile context, only then log hint request
     user_model = user_model_service.get_or_create(str(payload.session_id))
@@ -37,5 +37,6 @@ def request_help(payload: HelpRequest) -> HelpResponse:
         context=context,
         image_png=image_png,
         profile_context=profile_context,
+        previous_questions=payload.previous_questions or None,
         session_id=str(payload.session_id),
     )

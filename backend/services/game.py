@@ -1,4 +1,6 @@
 import random
+import time
+from collections import OrderedDict
 from contextlib import contextmanager
 from fractions import Fraction
 from threading import Lock
@@ -145,10 +147,27 @@ class GameSession:
         self._rebuild_task_map()
 
 
+_MAX_SESSIONS = 100
+_SESSION_TTL = 60 * 60 * 2  # 2 hours
+
+
 class GameService:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._sessions: dict[str, GameSession] = {}
+        self._sessions: OrderedDict[str, GameSession] = OrderedDict()
+        self._session_last_active: dict[str, float] = {}
+
+    def _evict(self) -> None:
+        """Evict expired sessions, then oldest if still over cap. Caller must hold _lock."""
+        now = time.monotonic()
+        expired = [sid for sid, t in self._session_last_active.items() if now - t > _SESSION_TTL]
+        for sid in expired:
+            self._sessions.pop(sid, None)
+            self._session_last_active.pop(sid, None)
+
+        while len(self._sessions) >= _MAX_SESSIONS:
+            sid, _ = self._sessions.popitem(last=False)
+            self._session_last_active.pop(sid, None)
 
     def init_game(self, grade: str) -> tuple[InitGameResponse, GameSession]:
         settings = get_settings()
@@ -162,7 +181,9 @@ class GameService:
         )
 
         with self._lock:
+            self._evict()
             self._sessions[str(session_id)] = session
+            self._session_last_active[str(session_id)] = time.monotonic()
 
         return (
             InitGameResponse(
@@ -177,7 +198,11 @@ class GameService:
 
     def get_session(self, session_id: str) -> GameSession | None:
         with self._lock:
-            return self._sessions.get(session_id)
+            session = self._sessions.get(session_id)
+            if session is not None:
+                self._session_last_active[session_id] = time.monotonic()
+                self._sessions.move_to_end(session_id)
+            return session
 
     def get_task(self, session_id: str, task_id: str) -> "Task | None":
         """Return the Task stored on a session, or None if not found."""
@@ -197,6 +222,10 @@ class GameService:
             yield session
 
     def draw_hand(self, session: GameSession, hand_size: int) -> DrawHandResponse:
+        # Clear previous round's task data before generating new hand
+        session._tasks.clear()
+        session._expected_answers.clear()
+
         # Generate new cards
         hand, expected_answers = self._generate_hand(session, hand_size)
         session.set_hand(hand)

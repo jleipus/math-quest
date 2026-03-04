@@ -13,6 +13,7 @@ import type { Point, Stroke } from "../lib/types";
 
 export type DrawingCanvasHandle = {
   getStrokes: () => Stroke[];
+  getSize: () => { width: number; height: number };
   clear: () => void;
 };
 
@@ -144,7 +145,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     });
   }, []);
 
-  useImperativeHandle(ref, () => ({ getStrokes: () => strokes, clear }), [strokes, clear]);
+  const getSize = useCallback(() => {
+    const r = canvasRef.current?.getBoundingClientRect();
+    return {
+      width: Math.round(r?.width ?? 512),
+      height: Math.round(r?.height ?? 512),
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({ getStrokes: () => strokes, getSize, clear }), [strokes, getSize, clear]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", background: "#f5f0f8" }}>

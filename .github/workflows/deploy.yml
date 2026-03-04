@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to deploy (e.g. 1.0.0). Defaults to VERSION.def file.'
+        description: 'Version to deploy (e.g. 1.0.0). Defaults to latest in CHANGELOG.txt.'
         required: false
 
 env:
@@ -32,7 +32,7 @@ jobs:
       - name: Build and push images
         id: version
         run: |
-          VERSION=v$(cat VERSION.def)
+          VERSION=v$(head -1 CHANGELOG.txt)
           PROJECT_ID=$(gcloud config get-value project)
           REGISTRY=${{ env.REGION }}-docker.pkg.dev/$PROJECT_ID/${{ env.GAR_REPO }}
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
