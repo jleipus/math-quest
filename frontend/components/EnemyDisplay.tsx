@@ -56,11 +56,6 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
         />
       </div>
 
-      {/* ENEMY label */}
-      <div className="font-pixel text-sm" style={{ color: "#e05050" }}>
-        ENEMY
-      </div>
-
       {/* HP numbers */}
       <div
         style={{

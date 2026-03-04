@@ -24,6 +24,8 @@ resource "google_cloud_run_v2_service" "backend" {
   deletion_protection = false
 
   template {
+    revision = "mathquest-backend-${replace(var.image_tag, ".", "-")}"
+
     scaling {
       min_instance_count = 1
       max_instance_count = 1
@@ -80,6 +82,8 @@ resource "google_cloud_run_v2_service" "frontend" {
   deletion_protection = false
 
   template {
+    revision = "mathquest-frontend-${replace(var.image_tag, ".", "-")}"
+
     scaling {
       max_instance_count = 3
     }

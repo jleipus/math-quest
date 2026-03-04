@@ -44,6 +44,7 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
     null,
   );
   const [solved, setSolved] = useState(savedState?.solved ?? false);
+  const [currentPower, setCurrentPower] = useState(card.card_power);
 
   function collectState(): CardModalState {
     return {
@@ -55,7 +56,7 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
   }
 
   function handleClose() {
-    if (solved) onPlayCard(card);
+    if (solved) onPlayCard({ ...card, card_power: currentPower });
     onClose(collectState());
   }
 
@@ -78,11 +79,14 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
         task_id: card.task.task_id,
         answer: answer.trim(),
       });
+      setCurrentPower(result.card_power);
       if (result.correct) {
         setSolved(true);
         setFeedback({ type: "success", text: "Correct!" });
       } else {
-        setFeedback({ type: "error", text: "Not quite - Try again." });
+        const penalty = card.card_power - result.card_power;
+        const penaltyText = penalty > 0 ? ` (-${penalty} power)` : "";
+        setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
       }
     } catch {
       setFeedback({ type: "error", text: "Something went wrong. Try again." });
@@ -141,7 +145,8 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
               TASK — {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
             </span>
             <span className="font-pixel text-sm" style={{ color: typeInfo.color }}>
-              {typeInfo.icon} {typeInfo.label} · {card.card_power} pts
+              {typeInfo.icon} {typeInfo.label} · {currentPower} pts
+              {currentPower < card.card_power ? ` (-${card.card_power - currentPower})` : ""}
             </span>
             <button
               onClick={handleClose}
