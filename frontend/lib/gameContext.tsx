@@ -5,6 +5,7 @@ import type { Card, InitGameResponse } from "./types";
 
 type GameState = {
   session_id: string;
+  session_token: string;
   player_hp: number;
   player_max_hp: number;
   enemy_hp: number;
@@ -89,6 +90,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const initGame = useCallback((session: InitGameResponse, grade: string, maxHp: number) => {
     setGame({
       session_id: session.session_id,
+      session_token: session.session_token,
       player_hp: session.player_hp,
       player_max_hp: maxHp,
       enemy_hp: session.enemy_hp,

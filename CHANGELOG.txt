@@ -1,3 +1,10 @@
+0.1.5
+
+- Add CORS protection
+- Add rate limiting
+- Add optional API key protection
+- Add session ownership keys
+
 0.1.4
 
 - Add debug logging in frontend

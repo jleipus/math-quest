@@ -35,7 +35,10 @@ export default function StartScreen() {
       const session = await initGame({ grade });
       initGameCtx(session, grade, session.player_hp);
 
-      const drawResp = await drawHand({ session_id: session.session_id });
+      const drawResp = await drawHand({
+        session_id: session.session_id,
+        x_session_token: session.session_token,
+      });
       setHand(drawResp.hand, drawResp.enemy_next_damage);
 
       router.push("/game");

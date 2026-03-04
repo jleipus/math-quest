@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.models.assistant import HelpResponse, HelpRequest
+from backend.security import limiter, verify_api_key, verify_session_token
 from backend.services.curriculum import curriculum_service
 from backend.services.game import game_service
 from backend.services.llm import llm_service
@@ -10,8 +11,11 @@ from backend.services.vision import rasterize_strokes_to_png
 router = APIRouter(prefix="/agent", tags=["agent"])
 
 
-@router.post("/help", response_model=HelpResponse)
-def request_help(payload: HelpRequest) -> HelpResponse:
+@router.post("/help", response_model=HelpResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("20/minute")
+def request_help(request: Request, payload: HelpRequest) -> HelpResponse:
+    verify_session_token(str(payload.session_id), payload.x_session_token)
+
     task = game_service.get_task(str(payload.session_id), str(payload.task_id))
     if task is None:
         raise HTTPException(status_code=404, detail="Unknown task_id")

@@ -45,6 +45,7 @@ jobs:
             --region ${{ env.REGION }} --format 'value(status.url)' 2>/dev/null || echo "")
           docker build \
             --build-arg "NEXT_PUBLIC_API_URL=${BACKEND_URL}/api/v1" \
+            --build-arg "NEXT_PUBLIC_API_KEY=${{ secrets.DAIS_API_KEY }}" \
             -t $REGISTRY/mathquest-frontend:$VERSION \
             -t $REGISTRY/mathquest-frontend:latest \
             ./frontend
@@ -73,6 +74,7 @@ jobs:
           TF_VAR_claude_api_key: ${{ secrets.DAIS_CLAUDE_API_KEY }}
           TF_VAR_gemini_api_key: ${{ secrets.DAIS_GEMINI_API_KEY }}
           TF_VAR_llm_provider: ${{ secrets.DAIS_LLM_PROVIDER }}
+          TF_VAR_api_key: ${{ secrets.DAIS_API_KEY }}
           TF_VAR_image_tag: ${{ inputs.version != '' && format('v{0}', inputs.version) || needs.build.outputs.version }}
         run: |
           terraform init

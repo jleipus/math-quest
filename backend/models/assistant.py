@@ -15,6 +15,7 @@ class Stroke(BaseModel):
 
 class HelpRequest(BaseModel):
     session_id: UUID
+    x_session_token: str = Field(min_length=1)
     task_id: UUID
     student_work: list[Stroke] | None = None
     canvas_width: int = 512
