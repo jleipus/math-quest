@@ -2,8 +2,38 @@
 
 % Briefly discuss your choices of methodology, (technical) solutions other results.
 
-The choice of a RAG architecture over a fine-tuned model reflects a pragmatic trade-off. RAG allows grounding in verified curriculum content without the cost and data requirements of fine-tuning, and makes the system's knowledge base transparent and editable by educators. However, it limits the depth of pedagogical reasoning the system can perform — the quality of scaffolding depends heavily on what is in the retrieval corpus and how well the MiniGuide prompt constraint shapes the LLM's output.
+\subsection{Addressing the Research Questions}
 
-The decision to use Google Gemini as the LLM introduces a dependency on a third-party, non-EU cloud service. This is acceptable for prototyping but would need to be resolved before any classroom deployment. The planned migration to a local CNN for handwriting recognition and an EU-based text-only LLM addresses this, though it introduces a different trade-off: a smaller, local model may produce lower-quality scaffolding than a frontier multimodal model.
+\textbf{RQ1: How can a dynamic user model approximate a student's ZPD and deliver guidance that promotes active reasoning?}
 
-The evaluation methodology is limited in scope. Two sessions — one with teachers, one with students — can validate the interaction design and surface usability issues, but cannot measure learning outcomes, long-term engagement, or the effectiveness of the adaptive difficulty system. These would require longitudinal studies with larger participant groups.
+Figure~\ref{fig:user_performance} shows that accuracy decreases and hint usage increases as difficulty rises from easy to hard, suggesting that easy problems mostly fall below the ZPD, while hard problems generally lie above it. Medium difficulty tasks proved to be closest to the targeted ZPD. However, the system currently treats all errors equally -- a calculation error is penalized the same way as a conceptual error, which limits the precision of the ZPD approximation.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/user_performance.png}
+    \caption{Left: violin plot of answer accuracy distribution by difficulty. Line shows median value, diamond shows mean value. Right: bar chart of average hint usage by difficulty.}
+    \label{fig:user_performance}
+\end{figure}
+
+\textbf{RQ2: To what extent can game-based design reframe errors as learning moments and sustain motivation?}
+
+Figure~\ref{fig:user_engagement} shows most users attempted fewer than 10 problems, while a small group engaged extensively. Survey responses on stress (Q5), while highly limited, were generally low.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/user_engagement.png}
+    \caption{Left: histogram of total answer attempts made by a user. Right: bar chart of overall number of answer attempts by question difficulty.}
+    \label{fig:user_engagement}
+\end{figure}
+
+The evaluation does not address what happens when a student answers incorrectly multiple times in a row. Repeated failure combined with the card power reduction mechanic could become discouraging, particularly for younger or less confident learners.
+
+\textbf{RQ3: How can the MiniGuide strategy ensure that AI responses provide guidance rather than direct answers?}
+
+Evaluation with the teacher confirmed that the guidance prompt responses were pedagogically sound and avoided leaking answers, but further evaluation and additional survey responses are required to more accurately gauge the systems success at addresing this question.
+
+\subsection{Limitations}
+
+The evaluation is limited in scope. Two sessions is insufficient for measuring learning outcomes, long-term engagement, or the effectiveness of the adaptive difficulty system. This would require longitudinal studies with larger and more diverse participant groups, including students across different ability levels.
+
+The current prototype does not implement content guardrails to filter potentially inappropriate LLM output before it reaches the student. While no issues were observed during testing, this is a necessary safeguard before any unsupervised use with children. This would need to be addressed in future iterations.

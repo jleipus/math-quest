@@ -1,6 +1,5 @@
 \documentclass{IOS-Book-Article}
 
-% \usepackage{enquote}
 \usepackage{csquotes}
 
 \usepackage{graphicx}
@@ -28,11 +27,11 @@
 
     % \pretitle{Pretitle}
 
-    \title{Supporting Active Learning in Math Tasks}
+    \title{Supporting Active Learning in Math Tasks Through a RAG-based Gamified System}
 
     \markboth{}{DAIS 2026\hb}
 
-    %\subtitle{Subtitle}
+    % \subtitle{Subtitle}
 
     \author[A]{\fnms{Michail} \snm{PETTAS}},
     \author[A]{\fnms{ZhiJun} \snm{CHENG}}
@@ -43,7 +42,7 @@
     \address[A]{Master's Programme in Artificial Intelligence, 2025}
 
     \begin{abstract}
-        Mathematics classrooms often struggle to support students with widely different skill levels, leading to disengagement for some and anxiety for others. Standard AI chatbots can worsen this by providing direct answers, bypassing the reasoning process that learning depends on. This project presents the design of a gamified web-based tutoring system for primary school students aged 10--12, where mathematical challenges are embedded in a card-based combat game. The system uses a Retrieval-Augmented Generation (RAG) architecture constrained by the \enquote{MiniGuide} pedagogical strategy, ensuring that the AI provides guiding questions rather than direct answers, functioning as a supportive peer that keeps learners within their Zone of Proximal Development. The prototype is built with a Next.js frontend and a FastAPI backend, with scaffolding grounded in Swedish curriculum content. An exploratory evaluation with teachers and students aims to validate whether the interaction design produces appropriate pedagogical guidance and an engaging learning experience.
+        Mathematics classrooms often struggle to support students with widely different skill levels, leading to disengagement for some and anxiety for others. Standard AI chatbots can worsen this by providing direct answers, bypassing the reasoning process that learning depends on. This project presents the design of a gamified web-based tutoring system for primary school students aged 10--12, where mathematical challenges are embedded in a turn-based card combat game. The system uses a Retrieval-Augmented Generation (RAG) architecture constrained by the \enquote{MiniGuide} pedagogical strategy, designed so that the AI provides guiding questions rather than direct answers, functioning as a supportive peer that aims to keep learners within their Zone of Proximal Development (ZPD). An exploratory evaluation with a teacher and students evaluates whether the interaction design produces appropriate pedagogical guidance and an engaging learning experience.
     \end{abstract}
 
     \begin{keyword}
@@ -59,20 +58,19 @@
 
 \markboth{March 2026\hb}{March 2026\hb}
 
-% \thispagestyle{empty}
-% \pagestyle{empty}
+\thispagestyle{empty}
+\pagestyle{empty}
 
 \input{sections/introduction}
 \input{sections/aim_research_questions}
+\input{sections/theoretical_grounding.tex}
 \input{sections/methods}
-\input{sections/time_plan}
 \input{sections/ethical_considerations}
-\input{sections/expected_results}
+\input{sections/results}
 \input{sections/discussion}
+\input{sections/conclusions.tex}
 
-% \section{Conclusions and Future Work}
-
-% Briefly summarise your results and what the next steps would be if/when you or others would continue with the project.
+\newpage
 
 \bibliographystyle{vancouver}
 \bibliography{references}
