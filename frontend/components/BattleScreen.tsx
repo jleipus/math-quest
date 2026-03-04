@@ -10,6 +10,7 @@ import EnemyDisplay from "./EnemyDisplay";
 import PlayerHPBar from "./PlayerHPBar";
 import TaskModal, { type CardModalState } from "./TaskModal";
 import UserModelModal from "./UserModelModal";
+import PauseMenu from "./PauseMenu";
 
 type FloatingNumber = {
   id: number;
@@ -37,6 +38,7 @@ export default function BattleScreen() {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [cardStates, setCardStates] = useState<Map<string, CardModalState>>(new Map());
   const [showUserModel, setShowUserModel] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [playingCardId, setPlayingCardId] = useState<string | null>(null);
   const [enemyShake, setEnemyShake] = useState(false);
   const [playerFlash, setPlayerFlash] = useState(false);
@@ -61,9 +63,35 @@ export default function BattleScreen() {
   }, [game?.player_hp]);
 
   useEffect(() => {
+    if (!game?.hand?.length) return;
+    console.groupCollapsed(`[MathQuest] Hand — Floor ${game.floor}`);
+    console.table(
+      game.hand.map((card) => ({
+        card: card.card_name,
+        type: card.card_type,
+        difficulty: card.task.difficulty,
+        topic: card.task.topic,
+        question: card.task.question,
+        answer: card.task.expected_answer,
+      })),
+    );
+    console.groupEnd();
+  }, [game?.hand]);
+
+  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (selectedCard) return;
+      // Let TaskModal and UserModelModal handle their own Escape
+      if (selectedCard || showUserModel) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowMenu((prev) => !prev);
+        return;
+      }
+
+      // Remaining shortcuts are suppressed while the pause menu is open
+      if (showMenu) return;
 
       if (e.code === "Space") {
         e.preventDefault();
@@ -84,7 +112,7 @@ export default function BattleScreen() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedCard, endingTurn, game?.hand, game?.energy]);
+  }, [selectedCard, showUserModel, showMenu, endingTurn, game?.hand, game?.energy]);
 
   if (!game) return null;
 
@@ -222,7 +250,7 @@ export default function BattleScreen() {
               background: "var(--px-panel)",
               border: "2px solid var(--px-panel-border)",
               boxShadow: "3px 3px 0 #1d0a1a",
-              padding: "10px 16px",
+              padding: "10px 18px",
               color: "var(--px-text-dim)",
               lineHeight: 1.8,
             }}
@@ -230,22 +258,40 @@ export default function BattleScreen() {
             <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
             <div>Floor {game.floor}</div>
           </div>
-          <button
-            onClick={() => setShowUserModel(true)}
-            className="font-pixel"
-            style={{
-              fontSize: "0.75rem",
-              background: "var(--px-panel)",
-              border: "2px solid var(--px-panel-border)",
-              boxShadow: "3px 3px 0 #1d0a1a",
-              color: "var(--px-gold)",
-              padding: "6px 12px",
-              letterSpacing: "0.06em",
-              cursor: "pointer",
-            }}
-          >
-            ⚙️ Profile
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowUserModel(true)}
+              className="font-pixel"
+              style={{
+                fontSize: "0.75rem",
+                background: "var(--px-panel)",
+                border: "2px solid var(--px-panel-border)",
+                boxShadow: "3px 3px 0 #1d0a1a",
+                color: "var(--px-gold)",
+                padding: "6px 12px",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setShowMenu(true)}
+              className="font-pixel"
+              style={{
+                fontSize: "0.75rem",
+                background: "var(--px-panel)",
+                border: "2px solid var(--px-panel-border)",
+                boxShadow: "3px 3px 0 #1d0a1a",
+                color: "var(--px-text-dim)",
+                padding: "6px 12px",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              ☰
+            </button>
+          </div>
         </div>
       </div>
 
@@ -370,6 +416,8 @@ export default function BattleScreen() {
       {showUserModel && game && (
         <UserModelModal sessionId={game.session_id} onClose={() => setShowUserModel(false)} />
       )}
+
+      {showMenu && <PauseMenu onResume={() => setShowMenu(false)} />}
     </div>
   );
 }

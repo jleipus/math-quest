@@ -53,6 +53,9 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
             raise HTTPException(status_code=500, detail="Expected answer missing")
 
         correct = game_service.check_answer(payload.answer, expected)
+        if not correct:
+            session.record_wrong_attempt(str(card.card_id))
+        current_power = session.penalised_power(card)
 
     # Record attempt outside the session lock, UserModelService has its own lock
     user_model_service.record_attempt(
@@ -62,10 +65,7 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
         difficulty=card.task.difficulty,
     )
 
-    if correct:
-        return AnswerResponse(correct=True, card_id=card.card_id)
-
-    return AnswerResponse(correct=False, card_id=card.card_id)
+    return AnswerResponse(correct=correct, card_id=card.card_id, card_power=current_power)
 
 
 @router.post("/play_card", response_model=PlayCardResponse)
