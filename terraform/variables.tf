@@ -33,3 +33,16 @@ variable "gemini_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "extra_allowed_origins" {
+  description = "Additional CORS origins beyond the auto-detected frontend URL (JSON array string, e.g. '[\"https://example.com\"]')"
+  type        = string
+  default     = "[]"
+}
+
+variable "api_key" {
+  description = "Shared API key sent by the frontend as X-API-Key. Leave empty to disable the check."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

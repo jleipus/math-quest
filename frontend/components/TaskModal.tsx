@@ -74,6 +74,7 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
     try {
       const result = await submitAnswer({
         session_id: game.session_id,
+        x_session_token: game.session_token,
         task_id: card.task.task_id,
         answer: answer.trim(),
       });
@@ -97,6 +98,7 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
       const { width, height } = canvasRef.current.getSize();
       const result = await requestHelp({
         session_id: game.session_id,
+        x_session_token: game.session_token,
         task_id: card.task.task_id,
         student_work: canvasRef.current.getStrokes(),
         canvas_width: width,

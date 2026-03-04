@@ -108,7 +108,11 @@ export default function BattleScreen() {
     setError(null);
     setPlayingCardId(card.card_id);
     try {
-      const result = await playCard({ session_id: game.session_id, card_id: card.card_id });
+      const result = await playCard({
+        session_id: game.session_id,
+        x_session_token: game.session_token,
+        card_id: card.card_id,
+      });
       spendEnergy(card.energy_cost);
 
       switch (result.card_type) {
@@ -151,7 +155,10 @@ export default function BattleScreen() {
     setError(null);
     setTurnMessage(null);
     try {
-      const result = await endTurn({ session_id: game.session_id });
+      const result = await endTurn({
+        session_id: game.session_id,
+        x_session_token: game.session_token,
+      });
 
       const newEnemy = result.enemy_max_hp !== game.enemy_max_hp;
       if (newEnemy) {

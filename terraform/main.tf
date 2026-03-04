@@ -54,8 +54,23 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "DAIS_GEMINI_API_KEY"
         value = var.gemini_api_key
       }
+      env {
+        name  = "DAIS_API_KEY"
+        value = var.api_key
+      }
+      env {
+        name = "DAIS_ALLOWED_ORIGINS"
+        value = jsonencode(
+          concat(
+            [google_cloud_run_v2_service.frontend.uri],
+            jsondecode(var.extra_allowed_origins)
+          )
+        )
+      }
     }
   }
+
+  depends_on = [google_cloud_run_v2_service.frontend]
 }
 
 resource "google_cloud_run_v2_service" "frontend" {
@@ -93,4 +108,14 @@ resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
   name     = google_cloud_run_v2_service.frontend.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+output "frontend_url" {
+  description = "Public URL of the frontend Cloud Run service"
+  value       = google_cloud_run_v2_service.frontend.uri
+}
+
+output "backend_url" {
+  description = "Public URL of the backend Cloud Run service"
+  value       = google_cloud_run_v2_service.backend.uri
 }

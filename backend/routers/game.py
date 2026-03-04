@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.config import get_settings
 from backend.models.game import (
@@ -10,8 +10,15 @@ from backend.models.game import (
     EndTurnResponse,
     InitGameRequest,
     InitGameResponse,
+    InitGameResponseWithToken,
     PlayCardResponse,
     PlayCardRequest,
+)
+from backend.security import (
+    limiter,
+    verify_api_key,
+    create_session_token,
+    verify_session_token,
 )
 from backend.services.game import game_service
 from backend.services.user_model import user_model_service
@@ -19,14 +26,17 @@ from backend.services.user_model import user_model_service
 router = APIRouter(prefix="/game", tags=["game"])
 
 
-@router.post("/init", response_model=InitGameResponse)
-def init_game(payload: InitGameRequest) -> InitGameResponse:
+@router.post("/init", response_model=InitGameResponseWithToken, dependencies=[Depends(verify_api_key)])
+def init_game(payload: InitGameRequest) -> InitGameResponseWithToken:
     data, _ = game_service.init_game(grade=payload.grade)
-    return data
+    token = create_session_token(str(data.session_id))
+    return InitGameResponseWithToken(**data.model_dump(), session_token=token)
 
 
-@router.post("/draw", response_model=DrawHandResponse)
-def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
+@router.post("/draw", response_model=DrawHandResponse, dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
+def draw_hand(request: Request, payload: DrawHandRequest) -> DrawHandResponse:
+    verify_session_token(str(payload.session_id), payload.x_session_token)
     settings = get_settings()
     with game_service.get_session_locked(str(payload.session_id)) as session:
         if session is None:
@@ -37,8 +47,9 @@ def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
             raise HTTPException(status_code=503, detail=str(exc))
 
 
-@router.post("/answer", response_model=AnswerResponse)
+@router.post("/answer", response_model=AnswerResponse, dependencies=[Depends(verify_api_key)])
 def answer_task(payload: AnswerRequest) -> AnswerResponse:
+    verify_session_token(str(payload.session_id), payload.x_session_token)
     with game_service.get_session_locked(str(payload.session_id)) as session:
         if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -68,8 +79,9 @@ def answer_task(payload: AnswerRequest) -> AnswerResponse:
     return AnswerResponse(correct=False, card_id=card.card_id)
 
 
-@router.post("/play_card", response_model=PlayCardResponse)
+@router.post("/play_card", response_model=PlayCardResponse, dependencies=[Depends(verify_api_key)])
 def play_card(payload: PlayCardRequest) -> PlayCardResponse:
+    verify_session_token(str(payload.session_id), payload.x_session_token)
     with game_service.get_session_locked(str(payload.session_id)) as session:
         if session is None:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -93,8 +105,9 @@ def play_card(payload: PlayCardRequest) -> PlayCardResponse:
     )
 
 
-@router.post("/end_turn", response_model=EndTurnResponse)
+@router.post("/end_turn", response_model=EndTurnResponse, dependencies=[Depends(verify_api_key)])
 def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
+    verify_session_token(str(payload.session_id), payload.x_session_token)
     settings = get_settings()
     with game_service.get_session_locked(str(payload.session_id)) as session:
         if session is None:

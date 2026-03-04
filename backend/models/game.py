@@ -16,8 +16,19 @@ class InitGameResponse(BaseModel):
     floor: int
 
 
-class DrawHandRequest(BaseModel):
+class InitGameResponseWithToken(InitGameResponse):
+    """Extends InitGameResponse with the one-time session token."""
+    session_token: str
+
+
+class SessionTokenRequest(BaseModel):
+    """Mixin — all session-scoped requests carry the session token."""
     session_id: UUID
+    x_session_token: str = Field(min_length=1)
+
+
+class DrawHandRequest(SessionTokenRequest):
+    pass
 
 
 class Task(BaseModel):
@@ -60,8 +71,7 @@ class DrawHandResponse(BaseModel):
     enemy_next_damage: int
 
 
-class AnswerRequest(BaseModel):
-    session_id: UUID
+class AnswerRequest(SessionTokenRequest):
     task_id: UUID
     answer: str = Field(min_length=1)
 
@@ -71,8 +81,7 @@ class AnswerResponse(BaseModel):
     card_id: UUID
 
 
-class PlayCardRequest(BaseModel):
-    session_id: UUID
+class PlayCardRequest(SessionTokenRequest):
     card_id: UUID
 
 
@@ -84,8 +93,8 @@ class PlayCardResponse(BaseModel):
     enemy_defeated: bool
 
 
-class EndTurnRequest(BaseModel):
-    session_id: UUID
+class EndTurnRequest(SessionTokenRequest):
+    pass
 
 
 class EndTurnResponse(BaseModel):

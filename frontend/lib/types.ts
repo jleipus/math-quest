@@ -12,6 +12,7 @@ export type Stroke = {
 
 export type HelpRequest = {
   session_id: string;
+  x_session_token: string;
   task_id: string;
   student_work?: Stroke[];
   canvas_width?: number;
@@ -36,6 +37,7 @@ export type InitGameRequest = {
 
 export type InitGameResponse = {
   session_id: string;
+  session_token: string;
   player_hp: number;
   enemy_hp: number;
   max_energy: number;
@@ -44,6 +46,7 @@ export type InitGameResponse = {
 
 export type DrawHandRequest = {
   session_id: string;
+  x_session_token: string;
 };
 
 export type Task = {
@@ -71,6 +74,7 @@ export type DrawHandResponse = {
 
 export type EndTurnRequest = {
   session_id: string;
+  x_session_token: string;
 };
 
 export type EndTurnResponse = {
@@ -85,6 +89,7 @@ export type EndTurnResponse = {
 
 export type AnswerRequest = {
   session_id: string;
+  x_session_token: string;
   task_id: string;
   answer: string;
 };
@@ -96,6 +101,7 @@ export type AnswerResponse = {
 
 export type PlayCardRequest = {
   session_id: string;
+  x_session_token: string;
   card_id: string;
 };
 
