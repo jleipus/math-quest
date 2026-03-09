@@ -17,6 +17,7 @@ provider "google" {
   region  = var.region
 }
 
+
 resource "google_cloud_run_v2_service" "backend" {
   name     = "mathquest-backend"
   location = var.region
@@ -24,8 +25,6 @@ resource "google_cloud_run_v2_service" "backend" {
   deletion_protection = false
 
   template {
-    revision = "mathquest-backend-${replace(var.image_tag, ".", "-")}"
-
     scaling {
       min_instance_count = 0
       max_instance_count = 1
@@ -57,26 +56,15 @@ resource "google_cloud_run_v2_service" "backend" {
         value = var.gemini_api_key
       }
       env {
-        name  = "DAIS_API_KEY"
-        value = var.api_key
-      }
-      env {
         name  = "DAIS_FIREBASE_SERVICE_ACCOUNT_JSON"
         value = var.firebase_service_account_json
       }
       env {
-        name = "DAIS_ALLOWED_ORIGINS"
-        value = jsonencode(
-          concat(
-            [google_cloud_run_v2_service.frontend.uri],
-            jsondecode(var.extra_allowed_origins)
-          )
-        )
+        name  = "DAIS_ALLOWED_ORIGINS"
+        value = var.allowed_origins # e.g. '["https://yourdomain.com"]' or '["*"]'
       }
     }
   }
-
-  depends_on = [google_cloud_run_v2_service.frontend]
 }
 
 resource "google_cloud_run_v2_service" "frontend" {
@@ -86,8 +74,6 @@ resource "google_cloud_run_v2_service" "frontend" {
   deletion_protection = false
 
   template {
-    revision = "mathquest-frontend-${replace(var.image_tag, ".", "-")}"
-
     scaling {
       max_instance_count = 1
     }

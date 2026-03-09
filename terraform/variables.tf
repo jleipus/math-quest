@@ -34,17 +34,10 @@ variable "gemini_api_key" {
   default     = ""
 }
 
-variable "extra_allowed_origins" {
-  description = "Additional CORS origins beyond the auto-detected frontend URL (JSON array string, e.g. '[\"https://example.com\"]')"
+variable "allowed_origins" {
+  description = "JSON array string of allowed CORS origins"
   type        = string
-  default     = "[]"
-}
-
-variable "api_key" {
-  description = "Shared API key sent by the frontend as X-API-Key. Leave empty to disable the check."
-  type        = string
-  sensitive   = true
-  default     = ""
+  default     = "[\"*\"]"
 }
 
 variable "firebase_service_account_json" {
