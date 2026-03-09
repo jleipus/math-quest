@@ -33,8 +33,6 @@ class StartSessionRequest(BaseModel):
 
 class StartSessionResponse(BaseModel):
     session_id: UUID
-    player_hp: int
-    enemy_hp: int
     max_energy: int
 
 

@@ -125,7 +125,8 @@ export function enemyHpForFloor(floor: number): number {
 
 /** Calculate the new enemy damage for the given floor number. */
 export function enemyDamageForFloor(floor: number): number {
-  const min = ENEMY_BASE_DAMAGE * Math.pow(1.2, floor - 1);
-  const max = ENEMY_BASE_DAMAGE * Math.pow(2, floor - 1);
+  const scale = Math.pow(1.2, floor - 1);
+  const min = Math.round(10 * scale);
+  const max = Math.round(20 * scale);
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }

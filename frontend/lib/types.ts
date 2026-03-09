@@ -37,8 +37,6 @@ export type StartSessionRequest = {
 
 export type StartSessionResponse = {
   session_id: string;
-  player_hp: number;
-  enemy_hp: number;
   max_energy: number;
 };
 

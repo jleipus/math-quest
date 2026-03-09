@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
 import { fetchHand } from "../lib/api";
-import {
-  resolveEnemyAttack,
-  applyCard,
-  enemyHpForFloor,
-  enemyDamageForFloor,
-} from "../lib/gameLogic";
+import { resolveEnemyAttack, applyCard, enemyHpForFloor } from "../lib/gameLogic";
 import type { Card } from "../lib/types";
 import CardHand from "./CardHand";
 import EnemyDisplay from "./EnemyDisplay";
@@ -33,7 +28,7 @@ export default function BattleScreen() {
     hydrated,
     setEnemyHp,
     setPlayerHp,
-    setHand,
+    beginTurn,
     removeCard,
     addShield,
     spendEnergy,
@@ -71,7 +66,7 @@ export default function BattleScreen() {
 
   useEffect(() => {
     if (!game?.hand?.length) return;
-    console.groupCollapsed(`[MathQuest] Hand - Floor ${game.floor}`);
+    console.groupCollapsed(`[MathQuest] Floor ${game.floor}, Turn ${game.turn}`);
     console.table(
       game.hand.map((card) => ({
         card: card.card_name,
@@ -83,7 +78,7 @@ export default function BattleScreen() {
       })),
     );
     console.groupEnd();
-  }, [game?.hand]);
+  }, [game?.turn]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -110,7 +105,7 @@ export default function BattleScreen() {
       const digit = parseInt(e.key, 10);
       if (!isNaN(digit) && digit >= 1 && digit <= 9 && game) {
         const card = game.hand[digit - 1];
-        if (card && game.energy >= card.energy_cost) {
+        if (card && game.energy >= card.energy_cost && !endingTurn) {
           e.preventDefault();
           setSelectedCard(card);
         }
@@ -229,7 +224,7 @@ export default function BattleScreen() {
         session_id: game.session_id,
         grade: game.grade,
       });
-      setHand(handResp.hand);
+      beginTurn(handResp.hand);
       setCardStates(new Map());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to end turn.");
@@ -282,6 +277,7 @@ export default function BattleScreen() {
           >
             <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
             <div>Floor {game.floor}</div>
+            <div>Turn {game.turn}</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -420,7 +416,7 @@ export default function BattleScreen() {
       >
         <CardHand
           hand={game.hand}
-          onClickCard={(card) => setSelectedCard(card)}
+          onClickCard={(card) => { if (!endingTurn) setSelectedCard(card); }}
           playingCardId={playingCardId}
           energy={game.energy}
         />

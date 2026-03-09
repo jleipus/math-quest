@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { Card, StartSessionResponse } from "./types";
+import { enemyDamageForFloor } from "./gameLogic";
 
 type GameState = {
   session_id: string;
@@ -13,6 +14,7 @@ type GameState = {
   hand: Card[];
   grade: string;
   floor: number;
+  turn: number;
   shield: number;
   energy: number;
   max_energy: number;
@@ -22,7 +24,6 @@ type GameState = {
   wrong_attempts: Record<string, number>;
 
   // Stats
-  damage_dealt_total: number;
   cards_played: number;
   help_requests: number;
 };
@@ -81,8 +82,8 @@ function usePersistedGame() {
 type GameContextValue = {
   game: GameState | null;
   hydrated: boolean;
-  initGame: (session: StartSessionResponse, grade: string, maxHp: number) => void;
-  setHand: (hand: Card[]) => void;
+  initGame: (session: StartSessionResponse, grade: string) => void;
+  beginTurn: (hand: Card[]) => void;
   setPlayerHp: (hp: number) => void;
   setEnemyHp: (hp: number, maxHp?: number) => void;
   advanceFloor: (enemyHp: number, enemyMaxHp: number, newFloor: number) => void;
@@ -102,22 +103,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [game, hydrated, setGame] = usePersistedGame();
 
   const initGame = useCallback(
-    (session: StartSessionResponse, grade: string, maxHp: number) => {
+    (session: StartSessionResponse, grade: string) => {
       setGame({
         session_id: session.session_id,
-        player_hp: session.player_hp,
-        player_max_hp: maxHp,
-        enemy_hp: session.enemy_hp,
-        enemy_max_hp: session.enemy_hp,
-        enemy_next_damage: 0,
+        player_hp: 100,
+        player_max_hp: 100,
+        enemy_hp: 100,
+        enemy_max_hp: 100,
+        enemy_next_damage: enemyDamageForFloor(1),
         hand: [],
         grade,
         floor: 1,
+        turn: 0,
         shield: 0,
         energy: session.max_energy,
         max_energy: session.max_energy,
         wrong_attempts: {},
-        damage_dealt_total: 0,
         cards_played: 0,
         help_requests: 0,
       });
@@ -125,7 +126,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [setGame],
   );
 
-  const setHand = useCallback(
+  const beginTurn = useCallback(
     (hand: Card[]) => {
       setGame((g) =>
         g
@@ -134,7 +135,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
               hand,
               energy: g.max_energy,
               shield: 0,
-
+              turn: g.turn + 1,
+              enemy_next_damage: enemyDamageForFloor(g.floor),
               // Reset wrong attempt counters when new hand is dealt
               wrong_attempts: {},
             }
@@ -197,7 +199,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         g
           ? {
               ...g,
-              damage_dealt_total: g.damage_dealt_total + amount,
               cards_played: g.cards_played + 1,
             }
           : g,
@@ -243,7 +244,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         game,
         hydrated,
         initGame,
-        setHand,
+        beginTurn,
         setPlayerHp,
         setEnemyHp,
         advanceFloor,

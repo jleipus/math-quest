@@ -8,7 +8,7 @@ import { useGame } from "../lib/gameContext";
 
 export default function StartScreen() {
   const router = useRouter();
-  const { initGame: initGameCtx, setHand } = useGame();
+  const { initGame: initGameCtx, beginTurn } = useGame();
 
   const [grades, setGrades] = useState<string[]>([]);
   const [grade, setGrade] = useState("");
@@ -33,13 +33,13 @@ export default function StartScreen() {
     setError(null);
     try {
       const session = await startSession({ grade });
-      initGameCtx(session, grade, session.player_hp);
+      initGameCtx(session, grade);
 
       const drawResp = await fetchHand({
         session_id: session.session_id,
         grade,
       });
-      setHand(drawResp.hand);
+      beginTurn(drawResp.hand);
 
       router.push("/game");
     } catch {

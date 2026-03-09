@@ -31,10 +31,7 @@ def start_session(payload: StartSessionRequest) -> StartSessionResponse:
     session_id = uuid4()
     return StartSessionResponse(
         session_id=session_id,
-        player_hp=settings.player_start_hp,
-        enemy_hp=settings.enemy_start_hp,
         max_energy=settings.max_energy,
-        floor=1,
     )
 
 
@@ -46,16 +43,13 @@ def start_session(payload: StartSessionRequest) -> StartSessionResponse:
 @limiter.limit("10/minute")
 def fetch_hand(request: Request, payload: FetchHandRequest) -> FetchHandResponse:
     try:
-        result = generate_hand(
+        hand = generate_hand(
             grade=payload.grade,
             session_id=str(payload.session_id),
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
-    return FetchHandResponse(
-        hand=result.hand,
-        enemy_next_damage=result.enemy_next_damage,
-    )
+    return FetchHandResponse(hand=hand)
 
 
 @router.post(
