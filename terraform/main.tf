@@ -27,7 +27,7 @@ resource "google_cloud_run_v2_service" "backend" {
     revision = "mathquest-backend-${replace(var.image_tag, ".", "-")}"
 
     scaling {
-      min_instance_count = 1
+      min_instance_count = 0
       max_instance_count = 1
     }
 
@@ -85,7 +85,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     revision = "mathquest-frontend-${replace(var.image_tag, ".", "-")}"
 
     scaling {
-      max_instance_count = 3
+      max_instance_count = 1
     }
 
     containers {

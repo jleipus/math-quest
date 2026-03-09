@@ -14,7 +14,7 @@ export default function GameOverScreen() {
 
   const stats = game
     ? [
-        { label: "Damage\ndealt", value: game.damage_dealt_total },
+        { label: "Floor\nreached", value: game.floor },
         { label: "Cards\nplayed", value: game.cards_played },
         { label: "Hints\nused", value: game.help_requests },
       ]
@@ -48,7 +48,7 @@ export default function GameOverScreen() {
           className="font-pixel text-center text-xs leading-loose"
           style={{ color: "var(--px-text-dim)" }}
         >
-          You ran out of HP.{"\n"}Every hero falls sometimes!
+          You have been defeated!
         </p>
 
         {/* Stats */}

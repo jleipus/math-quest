@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchGrades, initGame, drawHand } from "../lib/api";
+import { fetchGrades, startSession, fetchHand } from "../lib/api";
 import { useGame } from "../lib/gameContext";
 
 export default function StartScreen() {
   const router = useRouter();
-  const { initGame: initGameCtx, setHand } = useGame();
+  const { initGame: initGameCtx, beginTurn } = useGame();
 
   const [grades, setGrades] = useState<string[]>([]);
   const [grade, setGrade] = useState("");
@@ -32,14 +32,14 @@ export default function StartScreen() {
     setLoading(true);
     setError(null);
     try {
-      const session = await initGame({ grade });
-      initGameCtx(session, grade, session.player_hp);
+      const session = await startSession({ grade });
+      initGameCtx(session, grade);
 
-      const drawResp = await drawHand({
+      const drawResp = await fetchHand({
         session_id: session.session_id,
-        x_session_token: session.session_token,
+        grade,
       });
-      setHand(drawResp.hand, drawResp.enemy_next_damage);
+      beginTurn(drawResp.hand);
 
       router.push("/game");
     } catch {

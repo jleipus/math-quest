@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
-import { playCard, endTurn } from "../lib/api";
+import { fetchHand } from "../lib/api";
+import { resolveEnemyAttack, applyCard, enemyHpForFloor } from "../lib/gameLogic";
 import type { Card } from "../lib/types";
 import CardHand from "./CardHand";
 import EnemyDisplay from "./EnemyDisplay";
@@ -27,12 +28,13 @@ export default function BattleScreen() {
     hydrated,
     setEnemyHp,
     setPlayerHp,
-    setHand,
+    beginTurn,
     removeCard,
     addShield,
     spendEnergy,
     recordDamage,
     advanceFloor,
+    getWrongAttempts,
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -64,7 +66,7 @@ export default function BattleScreen() {
 
   useEffect(() => {
     if (!game?.hand?.length) return;
-    console.groupCollapsed(`[MathQuest] Hand — Floor ${game.floor}`);
+    console.groupCollapsed(`[MathQuest] Floor ${game.floor}, Turn ${game.turn}`);
     console.table(
       game.hand.map((card) => ({
         card: card.card_name,
@@ -76,7 +78,7 @@ export default function BattleScreen() {
       })),
     );
     console.groupEnd();
-  }, [game?.hand]);
+  }, [game?.turn]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -103,7 +105,7 @@ export default function BattleScreen() {
       const digit = parseInt(e.key, 10);
       if (!isNaN(digit) && digit >= 1 && digit <= 9 && game) {
         const card = game.hand[digit - 1];
-        if (card && game.energy >= card.energy_cost) {
+        if (card && game.energy >= card.energy_cost && !endingTurn) {
           e.preventDefault();
           setSelectedCard(card);
         }
@@ -123,7 +125,7 @@ export default function BattleScreen() {
     setTimeout(() => setFloatingNums((prev) => prev.filter((f) => f.id !== id)), 2000);
   }
 
-  async function handlePlayCard(card: Card) {
+  function handlePlayCard(card: Card, effectivePower: number) {
     if (!game) return;
 
     if (game.energy < card.energy_cost) {
@@ -135,45 +137,44 @@ export default function BattleScreen() {
 
     setError(null);
     setPlayingCardId(card.card_id);
-    try {
-      const result = await playCard({
-        session_id: game.session_id,
-        x_session_token: game.session_token,
-        card_id: card.card_id,
-      });
-      spendEnergy(card.energy_cost);
 
-      switch (result.card_type) {
-        case "attack":
-          setEnemyHp(result.enemy_hp);
-          recordDamage(result.effect_value);
-          addFloatingNumber(result.effect_value, "#e05050", "-");
-          setEnemyShake(true);
-          setTimeout(() => setEnemyShake(false), 500);
-          break;
-        case "heal":
-          setPlayerHp(result.player_hp);
-          addFloatingNumber(result.effect_value, "#4caf50", "+");
-          recordDamage(0);
-          break;
-        case "shield":
-          addShield(result.effect_value);
-          addFloatingNumber(result.effect_value, "#6080d0", "🛡");
-          recordDamage(0);
-          break;
-      }
+    const result = applyCard(
+      card,
+      effectivePower,
+      game.enemy_hp,
+      game.player_hp,
+      game.player_max_hp,
+    );
 
-      removeCard(card.card_id);
-      setCardStates((prev) => {
-        const m = new Map(prev);
-        m.delete(card.card_id);
-        return m;
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to play card.");
-    } finally {
-      setPlayingCardId(null);
+    spendEnergy(card.energy_cost);
+
+    switch (card.card_type) {
+      case "attack":
+        setEnemyHp(result.enemyHp);
+        recordDamage(effectivePower);
+        addFloatingNumber(effectivePower, "#e05050", "-");
+        setEnemyShake(true);
+        setTimeout(() => setEnemyShake(false), 500);
+        break;
+      case "heal":
+        setPlayerHp(result.playerHp);
+        addFloatingNumber(effectivePower, "#4caf50", "+");
+        recordDamage(0);
+        break;
+      case "shield":
+        addShield(result.shieldDelta);
+        addFloatingNumber(result.shieldDelta, "#6080d0", "🛡");
+        recordDamage(0);
+        break;
     }
+
+    removeCard(card.card_id);
+    setCardStates((prev) => {
+      const m = new Map(prev);
+      m.delete(card.card_id);
+      return m;
+    });
+    setPlayingCardId(null);
   }
 
   async function handleEndTurn() {
@@ -182,37 +183,49 @@ export default function BattleScreen() {
     setEndingTurn(true);
     setError(null);
     setTurnMessage(null);
-    try {
-      const result = await endTurn({
-        session_id: game.session_id,
-        x_session_token: game.session_token,
-      });
 
-      const newEnemy = result.enemy_max_hp !== game.enemy_max_hp;
-      if (newEnemy) {
-        advanceFloor(result.enemy_hp, result.enemy_max_hp);
+    try {
+      const enemyDefeated = game.enemy_hp <= 0;
+
+      if (enemyDefeated) {
+        const newFloor = game.floor + 1;
+        const newEnemyHp = enemyHpForFloor(newFloor);
+        advanceFloor(newEnemyHp, newEnemyHp, newFloor);
+
         setTurnMessage("Enemy defeated! A new enemy appears.");
+        setTurnMessageKey((k) => k + 1);
+        setTimeout(() => setTurnMessage(null), 4000);
       } else {
-        setEnemyHp(result.enemy_hp, result.enemy_max_hp);
-        setPlayerHp(result.player_hp);
+        const { newPlayerHp, rawDamage, absorbed, actualDamage } = resolveEnemyAttack(
+          game.enemy_next_damage,
+          game.shield,
+          game.player_hp,
+        );
+
+        setPlayerHp(newPlayerHp);
         setPlayerFlash(true);
         setTimeout(() => setPlayerFlash(false), 600);
 
-        const absorbed = result.shield_absorbed;
-        const raw = result.enemy_damage;
-        const actual = raw - absorbed;
         setTurnMessage(
           absorbed > 0
-            ? `Enemy dealt ${raw} dmg — shield absorbed ${absorbed}! You took ${actual}.`
-            : `Enemy dealt ${actual} damage!`,
+            ? `Enemy dealt ${rawDamage} dmg - shield absorbed ${absorbed}! You took ${actualDamage}.`
+            : `Enemy dealt ${actualDamage} damage!`,
         );
-      }
-      setTurnMessageKey((k) => k + 1);
-      setTimeout(() => setTurnMessage(null), 4000);
+        setTurnMessageKey((k) => k + 1);
+        setTimeout(() => setTurnMessage(null), 4000);
 
-      setHand(result.hand, result.enemy_next_damage);
+        if (newPlayerHp <= 0) {
+          setGameover(true);
+          return;
+        }
+      }
+
+      const handResp = await fetchHand({
+        session_id: game.session_id,
+        grade: game.grade,
+      });
+      beginTurn(handResp.hand);
       setCardStates(new Map());
-      if (result.player_hp <= 0) setGameover(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to end turn.");
     } finally {
@@ -264,6 +277,7 @@ export default function BattleScreen() {
           >
             <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
             <div>Floor {game.floor}</div>
+            <div>Turn {game.turn}</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -402,7 +416,7 @@ export default function BattleScreen() {
       >
         <CardHand
           hand={game.hand}
-          onClickCard={(card) => setSelectedCard(card)}
+          onClickCard={(card) => { if (!endingTurn) setSelectedCard(card); }}
           playingCardId={playingCardId}
           energy={game.energy}
         />
@@ -412,6 +426,7 @@ export default function BattleScreen() {
         <TaskModal
           card={selectedCard}
           savedState={cardStates.get(selectedCard.card_id)}
+          wrongAttempts={getWrongAttempts(selectedCard.card_id)}
           onPlayCard={handlePlayCard}
           onClose={(state) => {
             setCardStates((prev) => new Map(prev).set(selectedCard.card_id, state));

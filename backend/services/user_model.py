@@ -87,7 +87,7 @@ class UserModel:
                 else:
                     level = "appropriate difficulty (learning with support)"
 
-                # Detect behavioral patterns
+                # Classify dependence on hints
                 patterns = []
                 if hint_rate > 0.8:
                     patterns.append("asks for hints very often")
@@ -176,13 +176,6 @@ class UserModelService:
         with self._lock:
             model = self._get_or_create_unlocked(session_id)
             model.record_hint(topic=topic, difficulty=difficulty)
-
-    def flush(self, session_id: str) -> None:
-        """Persist the current in-memory model to TinyDB. Call on level advance."""
-        with self._lock:
-            model = self._models.get(session_id)
-            if model is not None:
-                self._save(session_id, model)
 
 
 user_model_service = UserModelService()

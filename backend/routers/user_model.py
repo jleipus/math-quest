@@ -1,5 +1,4 @@
 from uuid import UUID
-
 from fastapi import APIRouter
 
 from backend.models.user_model import UserModelResponse

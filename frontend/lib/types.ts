@@ -1,5 +1,3 @@
-// Assistant
-
 export type Point = {
   x: number;
   y: number;
@@ -10,44 +8,9 @@ export type Stroke = {
   timestamp_ms: number;
 };
 
-export type HelpRequest = {
-  session_id: string;
-  x_session_token: string;
-  task_id: string;
-  student_work?: Stroke[];
-  canvas_width?: number;
-  canvas_height?: number;
-  previous_questions?: string[];
-};
-
-export type HelpResponse = {
-  guiding_question: string;
-  context_used: string;
-};
-
-// Game
-
 export type Difficulty = "easy" | "medium" | "hard";
 export type CardType = "attack" | "heal" | "shield";
 export type AttackSubtype = "magic" | "bow" | "sword" | "axe";
-
-export type InitGameRequest = {
-  grade: string;
-};
-
-export type InitGameResponse = {
-  session_id: string;
-  session_token: string;
-  player_hp: number;
-  enemy_hp: number;
-  max_energy: number;
-  floor: number;
-};
-
-export type DrawHandRequest = {
-  session_id: string;
-  x_session_token: string;
-};
 
 export type Task = {
   task_id: string;
@@ -68,54 +31,54 @@ export type Card = {
   task: Task;
 };
 
-export type DrawHandResponse = {
-  hand: Card[];
-  enemy_next_damage: number;
+export type StartSessionRequest = {
+  grade: string;
 };
 
-export type EndTurnRequest = {
+export type StartSessionResponse = {
   session_id: string;
-  x_session_token: string;
+  max_energy: number;
 };
 
-export type EndTurnResponse = {
-  player_hp: number;
-  enemy_damage: number;
-  shield_absorbed: number;
-  hand: Card[];
-  enemy_next_damage: number;
-  enemy_hp: number;
-  enemy_max_hp: number;
-};
-
-export type AnswerRequest = {
+export type FetchHandRequest = {
   session_id: string;
-  x_session_token: string;
-  task_id: string;
-  answer: string;
+  grade: string;
 };
 
-export type AnswerResponse = {
+export type FetchHandResponse = {
+  hand: Card[];
+};
+
+export type RecordAnswerRequest = {
+  session_id: string;
+  topic: string;
+  difficulty: string;
   correct: boolean;
-  card_id: string;
-  card_power: number;
 };
 
-export type PlayCardRequest = {
+export type RecordAnswerResponse = {
+  ok: boolean;
+};
+
+export type HintRequest = {
   session_id: string;
-  x_session_token: string;
-  card_id: string;
+  grade: string;
+  topic: string;
+  difficulty: string;
+  question: string;
+  student_work?: Stroke[];
+  canvas_width?: number;
+  canvas_height?: number;
+  previous_questions?: string[];
 };
 
-export type PlayCardResponse = {
-  enemy_hp: number;
-  player_hp: number;
-  effect_value: number;
-  card_type: CardType;
-  enemy_defeated: boolean;
+export type HintResponse = {
+  guiding_question: string;
 };
 
-// User model
+export type GradesResponse = {
+  grades: string[];
+};
 
 export type DifficultyRecord = {
   topic: string;
