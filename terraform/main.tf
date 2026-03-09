@@ -61,6 +61,10 @@ resource "google_cloud_run_v2_service" "backend" {
         value = var.api_key
       }
       env {
+        name  = "DAIS_FIREBASE_SERVICE_ACCOUNT_JSON"
+        value = var.firebase_service_account_json
+      }
+      env {
         name = "DAIS_ALLOWED_ORIGINS"
         value = jsonencode(
           concat(
