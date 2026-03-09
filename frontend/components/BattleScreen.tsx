@@ -35,6 +35,7 @@ export default function BattleScreen() {
     recordDamage,
     advanceFloor,
     getWrongAttempts,
+    localTopicRecords,
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -221,8 +222,8 @@ export default function BattleScreen() {
       }
 
       const handResp = await fetchHand({
-        session_id: game.session_id,
         grade: game.grade,
+        user_model: localTopicRecords.length > 0 ? localTopicRecords : undefined,
       });
       beginTurn(handResp.hand);
       setCardStates(new Map());
@@ -416,7 +417,9 @@ export default function BattleScreen() {
       >
         <CardHand
           hand={game.hand}
-          onClickCard={(card) => { if (!endingTurn) setSelectedCard(card); }}
+          onClickCard={(card) => {
+            if (!endingTurn) setSelectedCard(card);
+          }}
           playingCardId={playingCardId}
           energy={game.energy}
         />
@@ -435,9 +438,7 @@ export default function BattleScreen() {
         />
       )}
 
-      {showUserModel && game && (
-        <UserModelModal sessionId={game.session_id} onClose={() => setShowUserModel(false)} />
-      )}
+      {showUserModel && <UserModelModal onClose={() => setShowUserModel(false)} />}
 
       {showMenu && <PauseMenu onResume={() => setShowMenu(false)} />}
     </div>

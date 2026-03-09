@@ -24,14 +24,21 @@ type Props = {
   onClose: (state: CardModalState) => void;
 };
 
-const cardTypeInfo: Record<string, { icon: string; label: string; color: string }> = {
-  attack: { icon: "⚔️", label: "Attack", color: "#e05050" },
-  heal: { icon: "💚", label: "Heal", color: "#4caf50" },
-  shield: { icon: "🛡️", label: "Shield", color: "#6080d0" },
+const cardTypeInfo: Record<string, { label: string; color: string }> = {
+  attack: { label: "Attack", color: "#e05050" },
+  heal: { label: "Heal", color: "#4caf50" },
+  shield: { label: "Shield", color: "#6080d0" },
 };
 
 export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard, onClose }: Props) {
-  const { game, recordHelp, recordWrongAttempt } = useGame();
+  const {
+    game,
+    recordHelp,
+    recordWrongAttempt,
+    recordLocalAttempt,
+    recordLocalHint,
+    localTopicRecords,
+  } = useGame();
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -93,8 +100,10 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
       setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
     }
 
+    // Update local user model
+    recordLocalAttempt(card.task.topic, card.task.difficulty, correct);
+
     recordAnswer({
-      session_id: game.session_id,
       topic: card.task.topic,
       difficulty: card.task.difficulty,
       correct,
@@ -111,12 +120,15 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     recordHelp();
     try {
       const { width, height } = canvasRef.current.getSize();
+      // Update local user model for hint
+      recordLocalHint(card.task.topic, card.task.difficulty);
+
       const result = await requestHint({
-        session_id: game.session_id,
         grade: card.task.grade,
         topic: card.task.topic,
         difficulty: card.task.difficulty,
         question: card.task.question,
+        user_model: localTopicRecords.length > 0 ? localTopicRecords : undefined,
         student_work: canvasRef.current.getStrokes(),
         canvas_width: width,
         canvas_height: height,
@@ -155,10 +167,10 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-4">
             <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
-              TASK — {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
+              TASK - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
             </span>
             <span className="font-pixel text-sm" style={{ color: typeInfo.color }}>
-              {typeInfo.icon} {typeInfo.label} · {currentPower} pts
+              {typeInfo.label} - {currentPower} pts
               {currentPower < card.card_power ? ` (-${card.card_power - currentPower})` : ""}
             </span>
             <button

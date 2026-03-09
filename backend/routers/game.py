@@ -1,4 +1,3 @@
-from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.config import get_settings
@@ -11,11 +10,11 @@ from backend.models.game import (
     StartSessionRequest,
     StartSessionResponse,
 )
-from backend.security import limiter, verify_api_key
+from backend.security import limiter, verify_firebase_token
 from backend.services.curriculum import curriculum_service
+from backend.services.firestore_user_model import firestore_user_model_service
 from backend.services.game import generate_hand
 from backend.services.llm import llm_service
-from backend.services.user_model import user_model_service
 from backend.services.vision import rasterize_strokes_to_png
 
 router = APIRouter(prefix="/game", tags=["game"])
@@ -24,28 +23,30 @@ router = APIRouter(prefix="/game", tags=["game"])
 @router.post(
     "/start",
     response_model=StartSessionResponse,
-    dependencies=[Depends(verify_api_key)],
 )
-def start_session(payload: StartSessionRequest) -> StartSessionResponse:
+def start_session(
+    payload: StartSessionRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> StartSessionResponse:
     settings = get_settings()
-    session_id = uuid4()
-    return StartSessionResponse(
-        session_id=session_id,
-        max_energy=settings.max_energy,
-    )
+    return StartSessionResponse(max_energy=settings.max_energy)
 
 
 @router.post(
     "/hand",
     response_model=FetchHandResponse,
-    dependencies=[Depends(verify_api_key)],
 )
 @limiter.limit("10/minute")
-def fetch_hand(request: Request, payload: FetchHandRequest) -> FetchHandResponse:
+def fetch_hand(
+    request: Request,
+    payload: FetchHandRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> FetchHandResponse:
     try:
         hand = generate_hand(
             grade=payload.grade,
-            session_id=str(payload.session_id),
+            uid=uid,
+            client_user_model=payload.user_model,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -55,25 +56,31 @@ def fetch_hand(request: Request, payload: FetchHandRequest) -> FetchHandResponse
 @router.post(
     "/answer",
     response_model=RecordAnswerResponse,
-    dependencies=[Depends(verify_api_key)],
 )
-def record_answer(payload: RecordAnswerRequest) -> RecordAnswerResponse:
-    user_model_service.record_attempt(
-        session_id=str(payload.session_id),
-        topic=payload.topic,
-        correct=payload.correct,
-        difficulty=payload.difficulty,
-    )
+def record_answer(
+    payload: RecordAnswerRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> RecordAnswerResponse:
+    if uid:
+        firestore_user_model_service.record_attempt(
+            uid=uid,
+            topic=payload.topic,
+            correct=payload.correct,
+            difficulty=payload.difficulty,
+        )
     return RecordAnswerResponse(ok=True)
 
 
 @router.post(
     "/hint",
     response_model=HintResponse,
-    dependencies=[Depends(verify_api_key)],
 )
 @limiter.limit("20/minute")
-def request_hint(request: Request, payload: HintRequest) -> HintResponse:
+def request_hint(
+    request: Request,
+    payload: HintRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> HintResponse:
     context = curriculum_service.retrieve_context(
         grade=payload.grade,
         topic=payload.topic,
@@ -84,14 +91,17 @@ def request_hint(request: Request, payload: HintRequest) -> HintResponse:
     if payload.student_work:
         image_png = rasterize_strokes_to_png(payload.student_work, payload.canvas_width, payload.canvas_height)
 
-    user_model = user_model_service.get_or_create(str(payload.session_id))
-    profile_context = user_model.get_profile_context()
+    if uid:
+        profile_context = firestore_user_model_service.get_or_create(uid).get_profile_context()
+        firestore_user_model_service.record_hint(
+            uid=uid,
+            topic=payload.topic,
+            difficulty=payload.difficulty,
+        )
+    else:
+        from backend.services.user_model import user_model_to_profile_context
 
-    user_model_service.record_hint(
-        session_id=str(payload.session_id),
-        topic=payload.topic,
-        difficulty=payload.difficulty,
-    )
+        profile_context = user_model_to_profile_context(payload.user_model) if payload.user_model else ""
 
     return llm_service.generate_guidance(
         question=payload.question,
@@ -99,5 +109,5 @@ def request_hint(request: Request, payload: HintRequest) -> HintResponse:
         image_png=image_png,
         profile_context=profile_context,
         previous_questions=payload.previous_questions or None,
-        session_id=str(payload.session_id),
+        session_id=uid or "anonymous",
     )

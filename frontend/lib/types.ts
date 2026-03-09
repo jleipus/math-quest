@@ -36,13 +36,12 @@ export type StartSessionRequest = {
 };
 
 export type StartSessionResponse = {
-  session_id: string;
   max_energy: number;
 };
 
 export type FetchHandRequest = {
-  session_id: string;
   grade: string;
+  user_model?: TopicRecord[];
 };
 
 export type FetchHandResponse = {
@@ -50,7 +49,6 @@ export type FetchHandResponse = {
 };
 
 export type RecordAnswerRequest = {
-  session_id: string;
   topic: string;
   difficulty: string;
   correct: boolean;
@@ -61,11 +59,11 @@ export type RecordAnswerResponse = {
 };
 
 export type HintRequest = {
-  session_id: string;
   grade: string;
   topic: string;
   difficulty: string;
   question: string;
+  user_model?: TopicRecord[];
   student_work?: Stroke[];
   canvas_width?: number;
   canvas_height?: number;
@@ -94,6 +92,5 @@ export type TopicRecord = {
 };
 
 export type UserModelResponse = {
-  session_id: string;
   topics: TopicRecord[];
 };

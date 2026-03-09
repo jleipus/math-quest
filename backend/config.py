@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # Security
     allowed_origins: list[str] = ["*"]
-    api_key: str | None = None  # If set, all /api/v1 requests must supply X-API-Key header
+    firebase_service_account_json: str | None = None  # JSON string of Firebase service account
 
     # LLMs
     llm_provider: str = "claude"
