@@ -17,7 +17,7 @@ class Topic(BaseModel):
 
 
 class Grade(BaseModel):
-    """A school grade (Årskurs 4/5/6) containing topics."""
+    """A school grade containing topics."""
 
     name: str
     url: str

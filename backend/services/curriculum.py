@@ -46,24 +46,6 @@ class CurriculumService:
             raise RuntimeError(f"No topics found for grade {grade_name!r}.")
         return [t.name for t in grade.topics]
 
-    def get_random_topic(self, grade_name: str) -> str:
-        """Return a random topic name for the given grade.
-
-        Args:
-            grade_name: Grade name as stored in TinyDB, e.g. ``"Årskurs 4"``.
-
-        Returns:
-            A randomly chosen topic name from that grade.
-
-        Raises:
-            RuntimeError: If the grade is not found or has no topics.
-        """
-        grades = self._load_tree()
-        grade = next((g for g in grades if g.name == grade_name), None)
-        if not grade or not grade.topics:
-            raise RuntimeError(f"No topics found for grade {grade_name!r}.")
-        return random.choice(grade.topics).name
-
     def retrieve_context(self, grade: str, topic: str, question: str, top_k: int | None = None) -> str:
         """Query ChromaDB for lesson text relevant to the grade, topic, and question.
 

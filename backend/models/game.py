@@ -4,36 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-class InitGameRequest(BaseModel):
-    grade: str = Field(min_length=1)
-
-
-class InitGameResponse(BaseModel):
-    session_id: UUID
-    player_hp: int
-    enemy_hp: int
-    max_energy: int
-    floor: int
-
-
-class InitGameResponseWithToken(InitGameResponse):
-    """Extends InitGameResponse with the one-time session token."""
-    session_token: str
-
-
-class SessionTokenRequest(BaseModel):
-    """Mixin — all session-scoped requests carry the session token."""
-    session_id: UUID
-    x_session_token: str = Field(min_length=1)
-
-
-class DrawHandRequest(SessionTokenRequest):
-    pass
-
-
 class Task(BaseModel):
-    """Internal task model."""
-
     task_id: UUID
     question: str
     grade: str
@@ -56,43 +27,32 @@ class Card(BaseModel):
     task: Task
 
 
-class DrawHandResponse(BaseModel):
+class StartSessionRequest(BaseModel):
+    grade: str = Field(min_length=1)
+
+
+class StartSessionResponse(BaseModel):
+    session_id: UUID
+    player_hp: int
+    enemy_hp: int
+    max_energy: int
+
+
+class FetchHandRequest(BaseModel):
+    session_id: UUID
+    grade: str = Field(min_length=1)
+
+
+class FetchHandResponse(BaseModel):
     hand: list[Card]
-    enemy_next_damage: int
 
 
-class AnswerRequest(SessionTokenRequest):
-    task_id: UUID
-    answer: str = Field(min_length=1)
-
-
-class AnswerResponse(BaseModel):
+class RecordAnswerRequest(BaseModel):
+    session_id: UUID
+    topic: str = Field(min_length=1)
+    difficulty: str = Field(min_length=1)
     correct: bool
-    card_id: UUID
-    card_power: int
 
 
-class PlayCardRequest(SessionTokenRequest):
-    card_id: UUID
-
-
-class PlayCardResponse(BaseModel):
-    enemy_hp: int
-    player_hp: int
-    effect_value: int
-    card_type: CardType
-    enemy_defeated: bool
-
-
-class EndTurnRequest(SessionTokenRequest):
-    pass
-
-
-class EndTurnResponse(BaseModel):
-    player_hp: int
-    enemy_damage: int
-    shield_absorbed: int
-    hand: list[Card]
-    enemy_next_damage: int
-    enemy_hp: int
-    enemy_max_hp: int
+class RecordAnswerResponse(BaseModel):
+    ok: bool = True
