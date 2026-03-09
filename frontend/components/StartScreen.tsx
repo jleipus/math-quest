@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchGrades, initGame, drawHand } from "../lib/api";
+import { fetchGrades, startSession, fetchHand } from "../lib/api";
 import { useGame } from "../lib/gameContext";
 
 export default function StartScreen() {
@@ -32,14 +32,14 @@ export default function StartScreen() {
     setLoading(true);
     setError(null);
     try {
-      const session = await initGame({ grade });
+      const session = await startSession({ grade });
       initGameCtx(session, grade, session.player_hp);
 
-      const drawResp = await drawHand({
+      const drawResp = await fetchHand({
         session_id: session.session_id,
-        x_session_token: session.session_token,
+        grade,
       });
-      setHand(drawResp.hand, drawResp.enemy_next_damage);
+      setHand(drawResp.hand);
 
       router.push("/game");
     } catch {

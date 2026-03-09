@@ -2,7 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import type { Card, Stroke } from "../lib/types";
-import { requestHelp, submitAnswer } from "../lib/api";
+import { recordAnswer, requestHint } from "../lib/api";
+import { checkAnswer, penalisedPower } from "../lib/gameLogic";
 import { useGame } from "../lib/gameContext";
 import AgentChat from "./AgentChat";
 import DrawingCanvas, { type DrawingCanvasHandle } from "./DrawingCanvas";
@@ -17,7 +18,9 @@ export type CardModalState = {
 type Props = {
   card: Card;
   savedState?: CardModalState;
-  onPlayCard: (card: Card) => void;
+  /** Current wrong-attempt count for this card. */
+  wrongAttempts: number;
+  onPlayCard: (card: Card, effectivePower: number) => void;
   onClose: (state: CardModalState) => void;
 };
 
@@ -27,8 +30,8 @@ const cardTypeInfo: Record<string, { icon: string; label: string; color: string 
   shield: { icon: "🛡️", label: "Shield", color: "#6080d0" },
 };
 
-export default function TaskModal({ card, savedState, onPlayCard, onClose }: Props) {
-  const { game } = useGame();
+export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard, onClose }: Props) {
+  const { game, recordHelp, recordWrongAttempt } = useGame();
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -44,7 +47,9 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
     null,
   );
   const [solved, setSolved] = useState(savedState?.solved ?? false);
-  const [currentPower, setCurrentPower] = useState(card.card_power);
+  const [localWrongAttempts, setLocalWrongAttempts] = useState(wrongAttempts);
+
+  const currentPower = penalisedPower(card.card_power, localWrongAttempts);
 
   function collectState(): CardModalState {
     return {
@@ -56,7 +61,7 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
   }
 
   function handleClose() {
-    if (solved) onPlayCard({ ...card, card_power: currentPower });
+    if (solved) onPlayCard(card, currentPower);
     onClose(collectState());
   }
 
@@ -66,44 +71,52 @@ export default function TaskModal({ card, savedState, onPlayCard, onClose }: Pro
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [solved, answer, messages]);
+  }, [solved, answer, messages, localWrongAttempts]);
 
   async function handleSubmit() {
     if (!game || !answer.trim() || solved) return;
     setSubmitting(true);
     setFeedback(null);
-    try {
-      const result = await submitAnswer({
-        session_id: game.session_id,
-        x_session_token: game.session_token,
-        task_id: card.task.task_id,
-        answer: answer.trim(),
-      });
-      setCurrentPower(result.card_power);
-      if (result.correct) {
-        setSolved(true);
-        setFeedback({ type: "success", text: "Correct!" });
-      } else {
-        const penalty = card.card_power - result.card_power;
-        const penaltyText = penalty > 0 ? ` (-${penalty} power)` : "";
-        setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
-      }
-    } catch {
-      setFeedback({ type: "error", text: "Something went wrong. Try again." });
-    } finally {
-      setSubmitting(false);
+
+    const correct = checkAnswer(answer.trim(), card.task.expected_answer);
+
+    if (correct) {
+      setSolved(true);
+      setFeedback({ type: "success", text: "Correct!" });
+    } else {
+      const newWrongs = localWrongAttempts + 1;
+      setLocalWrongAttempts(newWrongs);
+      recordWrongAttempt(card.card_id);
+      const newPower = penalisedPower(card.card_power, newWrongs);
+      const penalty = card.card_power - newPower;
+      const penaltyText = penalty > 0 ? ` (-${penalty} power)` : "";
+      setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
     }
+
+    recordAnswer({
+      session_id: game.session_id,
+      topic: card.task.topic,
+      difficulty: card.task.difficulty,
+      correct,
+    }).catch(() => {
+      // Silently ignore
+    });
+
+    setSubmitting(false);
   }
 
   async function handleHelp() {
     if (!game || !canvasRef.current) return;
     setHelpLoading(true);
+    recordHelp();
     try {
       const { width, height } = canvasRef.current.getSize();
-      const result = await requestHelp({
+      const result = await requestHint({
         session_id: game.session_id,
-        x_session_token: game.session_token,
-        task_id: card.task.task_id,
+        grade: card.task.grade,
+        topic: card.task.topic,
+        difficulty: card.task.difficulty,
+        question: card.task.question,
         student_work: canvasRef.current.getStrokes(),
         canvas_width: width,
         canvas_height: height,
