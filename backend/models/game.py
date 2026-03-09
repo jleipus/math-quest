@@ -1,11 +1,12 @@
-from uuid import UUID
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from backend.models.user_model import TopicRecord
+
 
 class Task(BaseModel):
-    task_id: UUID
+    task_id: str
     question: str
     grade: str
     topic: str
@@ -18,7 +19,7 @@ AttackSubtype = Literal["magic", "bow", "sword", "axe"]
 
 
 class Card(BaseModel):
-    card_id: UUID
+    card_id: str
     card_name: str
     card_power: int
     card_type: CardType
@@ -32,13 +33,13 @@ class StartSessionRequest(BaseModel):
 
 
 class StartSessionResponse(BaseModel):
-    session_id: UUID
     max_energy: int
 
 
 class FetchHandRequest(BaseModel):
-    session_id: UUID
     grade: str = Field(min_length=1)
+    # Client-supplied user model for anonymous users
+    user_model: list[TopicRecord] | None = None
 
 
 class FetchHandResponse(BaseModel):
@@ -46,7 +47,6 @@ class FetchHandResponse(BaseModel):
 
 
 class RecordAnswerRequest(BaseModel):
-    session_id: UUID
     topic: str = Field(min_length=1)
     difficulty: str = Field(min_length=1)
     correct: bool

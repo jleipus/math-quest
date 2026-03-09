@@ -1,5 +1,6 @@
-from uuid import UUID
 from pydantic import BaseModel, Field
+
+from backend.models.user_model import TopicRecord
 
 
 class Point(BaseModel):
@@ -13,13 +14,14 @@ class Stroke(BaseModel):
 
 
 class HintRequest(BaseModel):
-    session_id: UUID
-
     # Task context
     grade: str = Field(min_length=1)
     topic: str = Field(min_length=1)
     difficulty: str = Field(min_length=1)
     question: str = Field(min_length=1)
+
+    # Client-supplied user model for anonymous users
+    user_model: list[TopicRecord] | None = None
 
     # Optional student work
     student_work: list[Stroke] | None = None

@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.models.game import Card, CardType, AttackSubtype, Task
+from backend.models.user_model import TopicRecord
 from backend.services.consts import (
     _ATTACK_SUBTYPES,
     _HEAL_NAMES,
@@ -16,12 +17,13 @@ from backend.services.consts import (
 
 def generate_hand(
     grade: str,
-    session_id: str,
+    uid: str | None = None,
     hand_size: int | None = None,
+    client_user_model: list[TopicRecord] | None = None,
 ) -> list[Card]:
     from backend.services.llm import llm_service
     from backend.services.curriculum import curriculum_service
-    from backend.services.user_model import user_model_service
+    from backend.services.user_model import user_model_to_profile_context
 
     settings = get_settings()
     if hand_size is None:
@@ -29,18 +31,25 @@ def generate_hand(
 
     rng = random.Random()
 
-    user_model = user_model_service.get_or_create(session_id)
-    profile_context = user_model.get_profile_context()
+    profile_context = ""
+    if uid:
+        from backend.services.firestore_user_model import firestore_user_model_service
+
+        user_model = firestore_user_model_service.get_or_create(uid)
+        profile_context = user_model.get_profile_context()
+    elif client_user_model:
+        profile_context = user_model_to_profile_context(client_user_model)
+
     grade_topics = curriculum_service.get_all_topics(grade)
 
     # If user model is not empty, LLM picks topics and difficulties for hand
     slots: list[tuple[str, str]] = []
-    if len(user_model.records) > 0:
+    if len(profile_context) > 0:
         slots = llm_service.select_hand_slots(
             topics=grade_topics,
             profile_context=profile_context,
             hand_size=hand_size,
-            session_id=session_id,
+            session_id=uid or "anonymous",
         )
 
     # Fallback if insufficient pairings are generated, or UM is empty
@@ -67,7 +76,7 @@ def generate_hand(
             difficulties=difficulties,
             curriculum_context=curriculum_context,
             profile_context=profile_context,
-            session_id=session_id,
+            session_id=uid or "anonymous",
         )
 
     unique_topics = list(topic_to_difficulties.keys())
@@ -107,7 +116,7 @@ def generate_hand(
 
         hand.append(
             Card(
-                card_id=uuid4(),
+                card_id=str(uuid4()),
                 card_name=card_name,
                 card_power=rng.randint(power_low, power_high),
                 card_type=card_type,

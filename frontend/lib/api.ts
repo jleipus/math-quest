@@ -1,3 +1,4 @@
+import { getIdToken } from "./firebase";
 import type {
   StartSessionRequest,
   StartSessionResponse,
@@ -11,7 +12,6 @@ import type {
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 
 export async function startSession(payload: StartSessionRequest): Promise<StartSessionResponse> {
   return post<StartSessionResponse>("/game/start", payload);
@@ -29,8 +29,8 @@ export async function requestHint(payload: HintRequest): Promise<HintResponse> {
   return post<HintResponse>("/game/hint", payload);
 }
 
-export async function fetchUserModel(session_id: string): Promise<UserModelResponse> {
-  return get<UserModelResponse>(`/user_model/${session_id}`);
+export async function fetchUserModel(): Promise<UserModelResponse> {
+  return get<UserModelResponse>("/user_model");
 }
 
 export async function fetchGrades(): Promise<string[]> {
@@ -38,9 +38,18 @@ export async function fetchGrades(): Promise<string[]> {
   return data.grades;
 }
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  const token = await getIdToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (API_KEY) headers["X-API-Key"] = API_KEY;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(await authHeaders()),
+  };
 
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
@@ -55,8 +64,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function get<T>(path: string): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (API_KEY) headers["X-API-Key"] = API_KEY;
+  const headers = await authHeaders();
 
   const res = await fetch(`${API_BASE}${path}`, { headers });
   if (!res.ok) {

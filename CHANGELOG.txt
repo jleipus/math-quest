@@ -1,3 +1,7 @@
+0.2.0
+
+- Add Firebase user management
+
 0.1.6
 
 - Refactor to move all game logic to frontend

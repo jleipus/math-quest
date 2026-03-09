@@ -1,11 +1,18 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import type { Card, StartSessionResponse } from "./types";
+import type { Card, StartSessionResponse, TopicRecord } from "./types";
 import { enemyDamageForFloor } from "./gameLogic";
+import {
+  type LocalUserModel,
+  loadLocalUserModel,
+  saveLocalUserModel,
+  recordAttemptLocal,
+  recordHintLocal,
+  toTopicRecords,
+} from "./userModel";
 
 type GameState = {
-  session_id: string;
   player_hp: number;
   player_max_hp: number;
   enemy_hp: number;
@@ -20,7 +27,6 @@ type GameState = {
   max_energy: number;
 
   // Per-card wrong-attempt counters (card_id -> count)
-  // Used by the frontend to compute penalised power without the backend
   wrong_attempts: Record<string, number>;
 
   // Stats
@@ -33,10 +39,7 @@ const STORAGE_KEY = "mathquest_game";
 function loadGame(): GameState | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw) as GameState;
-    }
-
+    if (raw) return JSON.parse(raw) as GameState;
     return null;
   } catch {
     return null;
@@ -59,7 +62,6 @@ function usePersistedGame() {
   const [game, setGameRaw] = useState<GameState | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from sessionStorage once on mount
   useEffect(() => {
     setGameRaw(loadGame());
     setHydrated(true);
@@ -95,17 +97,50 @@ type GameContextValue = {
   recordWrongAttempt: (card_id: string) => void;
   getWrongAttempts: (card_id: string) => number;
   reset: () => void;
+  // Local user model (for anonymous players)
+  recordLocalAttempt: (topic: string, difficulty: string, correct: boolean) => void;
+  recordLocalHint: (topic: string, difficulty: string) => void;
+  localTopicRecords: TopicRecord[];
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [game, hydrated, setGame] = usePersistedGame();
+  const [localModel, setLocalModelRaw] = useState<LocalUserModel>({ topics: {} });
+
+  // Hydrate local user model from sessionStorage
+  useEffect(() => {
+    setLocalModelRaw(loadLocalUserModel());
+  }, []);
+
+  const setLocalModel = useCallback((updater: (prev: LocalUserModel) => LocalUserModel) => {
+    setLocalModelRaw((prev) => {
+      const next = updater(prev);
+      saveLocalUserModel(next);
+      return next;
+    });
+  }, []);
+
+  const recordLocalAttempt = useCallback(
+    (topic: string, difficulty: string, correct: boolean) => {
+      setLocalModel((m) => recordAttemptLocal(m, topic, difficulty, correct));
+    },
+    [setLocalModel],
+  );
+
+  const recordLocalHint = useCallback(
+    (topic: string, difficulty: string) => {
+      setLocalModel((m) => recordHintLocal(m, topic, difficulty));
+    },
+    [setLocalModel],
+  );
+
+  const localTopicRecords = toTopicRecords(localModel);
 
   const initGame = useCallback(
     (session: StartSessionResponse, grade: string) => {
       setGame({
-        session_id: session.session_id,
         player_hp: 100,
         player_max_hp: 100,
         enemy_hp: 100,
@@ -137,7 +172,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
               shield: 0,
               turn: g.turn + 1,
               enemy_next_damage: enemyDamageForFloor(g.floor),
-              // Reset wrong attempt counters when new hand is dealt
               wrong_attempts: {},
             }
           : g,
@@ -147,18 +181,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const setPlayerHp = useCallback(
-    (hp: number) => {
-      setGame((g) => (g ? { ...g, player_hp: hp } : g));
-    },
+    (hp: number) => setGame((g) => (g ? { ...g, player_hp: hp } : g)),
     [setGame],
   );
 
   const setEnemyHp = useCallback(
     (hp: number, maxHp?: number) => {
-      setGame((g) => {
-        if (!g) return g;
-        return { ...g, enemy_hp: hp, enemy_max_hp: maxHp ?? g.enemy_max_hp };
-      });
+      setGame((g) => (g ? { ...g, enemy_hp: hp, enemy_max_hp: maxHp ?? g.enemy_max_hp } : g));
     },
     [setGame],
   );
@@ -180,9 +209,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const addShield = useCallback(
-    (amount: number) => {
-      setGame((g) => (g ? { ...g, shield: g.shield + amount } : g));
-    },
+    (amount: number) => setGame((g) => (g ? { ...g, shield: g.shield + amount } : g)),
     [setGame],
   );
 
@@ -194,15 +221,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const recordDamage = useCallback(
-    (amount: number) => {
-      setGame((g) =>
-        g
-          ? {
-              ...g,
-              cards_played: g.cards_played + 1,
-            }
-          : g,
-      );
+    (_amount: number) => {
+      setGame((g) => (g ? { ...g, cards_played: g.cards_played + 1 } : g));
     },
     [setGame],
   );
@@ -227,12 +247,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [setGame],
   );
 
-  // Synchronous read-only getter — reads from latest game state
-  // (only usable in render, not inside setGame callbacks)
   const getWrongAttempts = useCallback(
-    (card_id: string): number => {
-      return game?.wrong_attempts[card_id] ?? 0;
-    },
+    (card_id: string): number => game?.wrong_attempts[card_id] ?? 0,
     [game],
   );
 
@@ -256,6 +272,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         recordWrongAttempt,
         getWrongAttempts,
         reset,
+        recordLocalAttempt,
+        recordLocalHint,
+        localTopicRecords,
       }}
     >
       {children}

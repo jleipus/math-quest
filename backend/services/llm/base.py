@@ -60,7 +60,7 @@ def _parse_tasks(raw: str, grade: str, topic: str) -> list[Task]:
         ):
             tasks.append(
                 Task(
-                    task_id=uuid4(),
+                    task_id=str(uuid4()),
                     question=question.strip(),
                     expected_answer=answer.strip(),
                     grade=grade,
@@ -140,7 +140,7 @@ class LLMService:
             log("llm_error", {**ctx, "error": str(exc)})
             raise
 
-        return HintResponse(guiding_question=guiding_question, prompt_used=prompt)
+        return HintResponse(guiding_question=guiding_question)
 
     def generate_tasks_for_topic(
         self,
