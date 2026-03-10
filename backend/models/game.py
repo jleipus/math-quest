@@ -2,8 +2,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from backend.models.user_model import TopicRecord
-
 
 class Task(BaseModel):
     task_id: str
@@ -38,8 +36,6 @@ class StartSessionResponse(BaseModel):
 
 class FetchHandRequest(BaseModel):
     grade: str = Field(min_length=1)
-    # Client-supplied user model for anonymous users
-    user_model: list[TopicRecord] | None = None
 
 
 class FetchHandResponse(BaseModel):

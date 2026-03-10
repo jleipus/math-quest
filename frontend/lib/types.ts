@@ -41,7 +41,6 @@ export type StartSessionResponse = {
 
 export type FetchHandRequest = {
   grade: string;
-  user_model?: TopicRecord[];
 };
 
 export type FetchHandResponse = {
@@ -63,7 +62,6 @@ export type HintRequest = {
   topic: string;
   difficulty: string;
   question: string;
-  user_model?: TopicRecord[];
   student_work?: Stroke[];
   canvas_width?: number;
   canvas_height?: number;

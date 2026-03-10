@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
 import { fetchHand } from "../lib/api";
@@ -12,6 +12,8 @@ import PlayerHPBar from "./PlayerHPBar";
 import TaskModal, { type CardModalState } from "./TaskModal";
 import UserModelModal from "./UserModelModal";
 import PauseMenu from "./PauseMenu";
+import TutorialOverlay from "./TutorialOverlay";
+import SurveyModal from "./SurveyModal";
 
 type FloatingNumber = {
   id: number;
@@ -35,7 +37,6 @@ export default function BattleScreen() {
     recordDamage,
     advanceFloor,
     getWrongAttempts,
-    localTopicRecords,
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -52,6 +53,10 @@ export default function BattleScreen() {
   const [turnMessageKey, setTurnMessageKey] = useState(0);
   const [gameover, setGameover] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialShown = useRef(false);
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveySubmitted, setSurveySubmitted] = useState(false);
 
   useEffect(() => {
     if (gameover) router.push("/game/gameover");
@@ -64,6 +69,14 @@ export default function BattleScreen() {
   useEffect(() => {
     if (game && game.player_hp <= 0) setGameover(true);
   }, [game?.player_hp]);
+
+  // Show tutorial once when the first hand arrives (floor 1, turn 1)
+  useEffect(() => {
+    if (!game?.hand?.length || game.floor !== 1 || game.turn !== 1) return;
+    if (tutorialShown.current) return;
+    tutorialShown.current = true;
+    setShowTutorial(true);
+  }, [game?.turn, game?.floor]);
 
   useEffect(() => {
     if (!game?.hand?.length) return;
@@ -83,8 +96,8 @@ export default function BattleScreen() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Let TaskModal and UserModelModal handle their own Escape
-      if (selectedCard || showUserModel) return;
+      // Let TaskModal, UserModelModal and TutorialOverlay handle their own interactions
+      if (selectedCard || showUserModel || showTutorial) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === "Escape") {
@@ -115,7 +128,7 @@ export default function BattleScreen() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedCard, showUserModel, showMenu, endingTurn, game?.hand, game?.energy]);
+  }, [selectedCard, showUserModel, showTutorial, showMenu, endingTurn, game?.hand, game?.energy]);
 
   if (!game) return null;
 
@@ -223,7 +236,6 @@ export default function BattleScreen() {
 
       const handResp = await fetchHand({
         grade: game.grade,
-        user_model: localTopicRecords.length > 0 ? localTopicRecords : undefined,
       });
       beginTurn(handResp.hand);
       setCardStates(new Map());
@@ -244,7 +256,9 @@ export default function BattleScreen() {
       {/* Top bar */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex flex-col gap-2">
-          <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+          <div data-tutorial="player-hp">
+            <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+          </div>
 
           {game.shield > 0 && (
             <div
@@ -282,6 +296,7 @@ export default function BattleScreen() {
           </div>
           <div className="flex gap-2">
             <button
+              data-tutorial="profile-btn"
               onClick={() => setShowUserModel(true)}
               className="font-pixel"
               style={{
@@ -319,12 +334,14 @@ export default function BattleScreen() {
 
       {/* Enemy area */}
       <div className="relative flex flex-1 items-center justify-center">
-        <EnemyDisplay
-          hp={game.enemy_hp}
-          maxHp={game.enemy_max_hp}
-          shake={enemyShake}
-          nextDamage={game.enemy_next_damage}
-        />
+        <div data-tutorial="enemy">
+          <EnemyDisplay
+            hp={game.enemy_hp}
+            maxHp={game.enemy_max_hp}
+            shake={enemyShake}
+            nextDamage={game.enemy_next_damage}
+          />
+        </div>
 
         {floatingNums.map((f) => (
           <div
@@ -401,13 +418,39 @@ export default function BattleScreen() {
           </span>
         </div>
 
-        <button onClick={handleEndTurn} disabled={endingTurn} className="px-btn px-6 py-3 text-sm">
-          {endingTurn ? "…" : "End Turn ↩"}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          {!surveySubmitted && (
+            <button
+              onClick={() => setShowSurvey(true)}
+              className="font-pixel"
+              style={{
+                fontSize: "0.65rem",
+                background: "var(--px-panel)",
+                border: "2px solid var(--px-panel-border)",
+                boxShadow: "3px 3px 0 #1d0a1a",
+                color: "var(--px-text-dim)",
+                padding: "5px 10px",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              Feedback
+            </button>
+          )}
+          <button
+            data-tutorial="end-turn"
+            onClick={handleEndTurn}
+            disabled={endingTurn}
+            className="px-btn px-6 py-3 text-sm"
+          >
+            {endingTurn ? "…" : "End Turn ↩"}
+          </button>
+        </div>
       </div>
 
       {/* Hand area */}
       <div
+        data-tutorial="hand"
         style={{
           background: "var(--px-panel)",
           border: "2px solid var(--px-panel-border)",
@@ -441,6 +484,22 @@ export default function BattleScreen() {
       {showUserModel && <UserModelModal onClose={() => setShowUserModel(false)} />}
 
       {showMenu && <PauseMenu onResume={() => setShowMenu(false)} />}
+
+      {showSurvey && (
+        <SurveyModal
+          onClose={() => setShowSurvey(false)}
+          onSubmit={() => setSurveySubmitted(true)}
+          perfContext={{
+            grade: game.grade,
+            floor: game.floor,
+            turn: game.turn,
+            cards_played: game.cards_played,
+            help_requests: game.help_requests,
+          }}
+        />
+      )}
+
+      {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
     </div>
   );
 }

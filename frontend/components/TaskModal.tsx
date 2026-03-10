@@ -35,9 +35,6 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     game,
     recordHelp,
     recordWrongAttempt,
-    recordLocalAttempt,
-    recordLocalHint,
-    localTopicRecords,
   } = useGame();
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,9 +97,6 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
       setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
     }
 
-    // Update local user model
-    recordLocalAttempt(card.task.topic, card.task.difficulty, correct);
-
     recordAnswer({
       topic: card.task.topic,
       difficulty: card.task.difficulty,
@@ -120,15 +114,11 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     recordHelp();
     try {
       const { width, height } = canvasRef.current.getSize();
-      // Update local user model for hint
-      recordLocalHint(card.task.topic, card.task.difficulty);
-
       const result = await requestHint({
         grade: card.task.grade,
         topic: card.task.topic,
         difficulty: card.task.difficulty,
         question: card.task.question,
-        user_model: localTopicRecords.length > 0 ? localTopicRecords : undefined,
         student_work: canvasRef.current.getStrokes(),
         canvas_width: width,
         canvas_height: height,

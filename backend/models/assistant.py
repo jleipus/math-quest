@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field
 
-from backend.models.user_model import TopicRecord
-
 
 class Point(BaseModel):
     x: float
@@ -19,9 +17,6 @@ class HintRequest(BaseModel):
     topic: str = Field(min_length=1)
     difficulty: str = Field(min_length=1)
     question: str = Field(min_length=1)
-
-    # Client-supplied user model for anonymous users
-    user_model: list[TopicRecord] | None = None
 
     # Optional student work
     student_work: list[Stroke] | None = None

@@ -65,7 +65,7 @@ export default function AuthPanel({ onAuthChange }: Props) {
     );
   }
 
-  if (user) {
+  if (user && !user.isAnonymous) {
     return (
       <div style={panelStyle} className="flex flex-col gap-4">
         <p

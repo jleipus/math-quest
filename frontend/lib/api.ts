@@ -33,6 +33,10 @@ export async function fetchUserModel(): Promise<UserModelResponse> {
   return get<UserModelResponse>("/user_model");
 }
 
+export async function resetUserModel(): Promise<void> {
+  await del("/user_model");
+}
+
 export async function fetchGrades(): Promise<string[]> {
   const data = await get<{ grades: string[] }>("/curriculum/grades");
   return data.grades;
@@ -61,6 +65,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     throw new Error((err as { detail?: string }).detail ?? `Request failed: ${res.status}`);
   }
   return res.json() as Promise<T>;
+}
+
+async function del(path: string): Promise<void> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE}${path}`, { method: "DELETE", headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail ?? `Request failed: ${res.status}`);
+  }
 }
 
 async function get<T>(path: string): Promise<T> {

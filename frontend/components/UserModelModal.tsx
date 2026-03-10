@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchUserModel } from "../lib/api";
-import { auth } from "../lib/firebase";
-import { useGame } from "../lib/gameContext";
+import { fetchUserModel, resetUserModel } from "../lib/api";
+import { ensureSignedIn } from "../lib/firebase";
 import type { TopicRecord, DifficultyRecord } from "../lib/types";
 
 type Props = {
@@ -11,25 +10,18 @@ type Props = {
 };
 
 export default function UserModelModal({ onClose }: Props) {
-  const { localTopicRecords } = useGame();
   const [topics, setTopics] = useState<TopicRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user && !user.isAnonymous) {
-      // Signed-in user: fetch from Firestore via backend
-      fetchUserModel()
-        .then((data) => setTopics(data.topics))
-        .catch((e) => setError(e instanceof Error ? e.message : "Failed to load."))
-        .finally(() => setLoading(false));
-    } else {
-      // Anonymous user: use local model from sessionStorage
-      setTopics(localTopicRecords);
-      setLoading(false);
-    }
-  }, [localTopicRecords]);
+    ensureSignedIn()
+      .then(() => fetchUserModel())
+      .then((data) => setTopics(data.topics))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load."))
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -38,6 +30,20 @@ export default function UserModelModal({ onClose }: Props) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  async function handleReset() {
+    if (!confirm("Reset your progress? This cannot be undone.")) return;
+    setResetting(true);
+    setError(null);
+    try {
+      await resetUserModel();
+      setTopics([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Reset failed.");
+    } finally {
+      setResetting(false);
+    }
+  }
 
   return (
     <div
@@ -65,19 +71,37 @@ export default function UserModelModal({ onClose }: Props) {
           >
             STUDENT PROFILE
           </span>
-          <button
-            onClick={onClose}
-            className="font-pixel"
-            style={{
-              fontSize: "0.75rem",
-              background: "#3d1a35",
-              border: "2px solid var(--px-panel-border)",
-              color: "var(--px-text-dim)",
-              padding: "6px 14px",
-            }}
-          >
-            ✕
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="font-pixel"
+              style={{
+                fontSize: "0.75rem",
+                background: "rgba(120,20,20,0.5)",
+                border: "2px solid #6a2020",
+                color: "#e08080",
+                padding: "6px 14px",
+                opacity: resetting ? 0.5 : 1,
+                cursor: resetting ? "not-allowed" : "pointer",
+              }}
+            >
+              {resetting ? "…" : "Reset"}
+            </button>
+            <button
+              onClick={onClose}
+              className="font-pixel"
+              style={{
+                fontSize: "0.75rem",
+                background: "#3d1a35",
+                border: "2px solid var(--px-panel-border)",
+                color: "var(--px-text-dim)",
+                padding: "6px 14px",
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Body */}

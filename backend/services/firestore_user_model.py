@@ -67,12 +67,10 @@ class FirestoreUserModelService:
             logger.warning("Firestore load failed for uid=%s: %s", uid, exc)
             return None
 
-    def _save(self, uid: str, model: UserModel) -> None:
+    def _save(self, uid: str, data: dict[str, Any]) -> None:
+        """Write a snapshot dict to Firestore."""
         try:
-            _get_db().collection("user_models").document(uid).set(
-                {"topics": self._to_doc(model)},
-                merge=True,
-            )
+            _get_db().collection("user_models").document(uid).set({"topics": data})
         except Exception as exc:
             logger.warning("Firestore save failed for uid=%s: %s", uid, exc)
 
@@ -90,51 +88,23 @@ class FirestoreUserModelService:
         with self._lock:
             model = self._get_or_create_unlocked(uid)
             model.record_attempt(topic=topic, correct=correct, difficulty=difficulty)
-        self._save(uid, model)
+            snapshot = self._to_doc(model)
+        self._save(uid, snapshot)
 
     def record_hint(self, uid: str, topic: str, difficulty: str) -> None:
         with self._lock:
             model = self._get_or_create_unlocked(uid)
             model.record_hint(topic=topic, difficulty=difficulty)
-        self._save(uid, model)
+            snapshot = self._to_doc(model)
+        self._save(uid, snapshot)
 
-    def merge_anonymous_into_account(self, anon_uid: str, account_uid: str) -> None:
-        """
-        Merge an anonymous user's model into a signed-in account's model,
-        then delete the anonymous document.
-        Called after a successful anonymous→Google account link.
-        """
+    def reset(self, uid: str) -> None:
         with self._lock:
-            anon_model = self._get_or_create_unlocked(anon_uid)
-            account_model = self._get_or_create_unlocked(account_uid)
-
-            # Add each anonymous attempt/hint count into the account model
-            for topic_rec in anon_model.records:
-                for diff_rec in topic_rec.records.values():
-                    for _ in range(diff_rec.attempts):
-                        account_model.record_attempt(
-                            topic=diff_rec.topic,
-                            correct=False,  # we only have totals, not individual results
-                            difficulty=diff_rec.difficulty,
-                        )
-                    # Adjust correct count directly (avoid double-counting)
-                    if diff_rec.correct:
-                        acct_rec = account_model._get_diff_record(diff_rec.topic, diff_rec.difficulty)
-                        acct_rec.correct += diff_rec.correct
-                        # record_attempt already added diff_rec.attempts, compensate
-                        acct_rec.correct = min(acct_rec.correct, acct_rec.attempts)
-                    for _ in range(diff_rec.hints):
-                        account_model.record_hint(topic=diff_rec.topic, difficulty=diff_rec.difficulty)
-
-            # Evict anonymous from cache
-            self._cache.pop(anon_uid, None)
-
-        # Persist account model and delete anonymous document
-        self._save(account_uid, account_model)
+            self._cache.pop(uid, None)
         try:
-            _get_db().collection("user_models").document(anon_uid).delete()
+            _get_db().collection("user_models").document(uid).delete()
         except Exception as exc:
-            logger.warning("Failed to delete anonymous Firestore doc uid=%s: %s", anon_uid, exc)
+            logger.warning("Firestore reset failed for uid=%s: %s", uid, exc)
 
 
 firestore_user_model_service = FirestoreUserModelService()
