@@ -1,3 +1,9 @@
+0.2.1
+
+- Add feedback survey
+- Add tutorial overlay
+- Add anonymous login
+
 0.2.0
 
 - Add Firebase user management
