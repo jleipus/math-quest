@@ -1,17 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import type { Card, StartSessionResponse, TopicRecord } from "./types";
+import type { Card, StartSessionResponse } from "./types";
 import { enemyDamageForFloor } from "./gameLogic";
-import {
-  type LocalUserModel,
-  loadLocalUserModel,
-  saveLocalUserModel,
-  clearLocalUserModel,
-  recordAttemptLocal,
-  recordHintLocal,
-  toTopicRecords,
-} from "./userModel";
+import { ensureSignedIn } from "./firebase";
 
 type GameState = {
   player_hp: number;
@@ -98,52 +90,17 @@ type GameContextValue = {
   recordWrongAttempt: (card_id: string) => void;
   getWrongAttempts: (card_id: string) => number;
   reset: () => void;
-  // Local user model (for anonymous players)
-  recordLocalAttempt: (topic: string, difficulty: string, correct: boolean) => void;
-  recordLocalHint: (topic: string, difficulty: string) => void;
-  resetLocalUserModel: () => void;
-  localTopicRecords: TopicRecord[];
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [game, hydrated, setGame] = usePersistedGame();
-  const [localModel, setLocalModelRaw] = useState<LocalUserModel>({ topics: {} });
 
-  // Hydrate local user model from sessionStorage
+  // Ensure every visitor has a Firebase UID (anonymous if not signed in with Google)
   useEffect(() => {
-    setLocalModelRaw(loadLocalUserModel());
+    ensureSignedIn().catch(() => {/* no-op: offline or misconfigured */});
   }, []);
-
-  const setLocalModel = useCallback((updater: (prev: LocalUserModel) => LocalUserModel) => {
-    setLocalModelRaw((prev) => {
-      const next = updater(prev);
-      saveLocalUserModel(next);
-      return next;
-    });
-  }, []);
-
-  const recordLocalAttempt = useCallback(
-    (topic: string, difficulty: string, correct: boolean) => {
-      setLocalModel((m) => recordAttemptLocal(m, topic, difficulty, correct));
-    },
-    [setLocalModel],
-  );
-
-  const recordLocalHint = useCallback(
-    (topic: string, difficulty: string) => {
-      setLocalModel((m) => recordHintLocal(m, topic, difficulty));
-    },
-    [setLocalModel],
-  );
-
-  const resetLocalUserModel = useCallback(() => {
-    clearLocalUserModel();
-    setLocalModelRaw({ topics: {} });
-  }, []);
-
-  const localTopicRecords = toTopicRecords(localModel);
 
   const initGame = useCallback(
     (session: StartSessionResponse, grade: string) => {
@@ -279,10 +236,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         recordWrongAttempt,
         getWrongAttempts,
         reset,
-        recordLocalAttempt,
-        recordLocalHint,
-        resetLocalUserModel,
-        localTopicRecords,
       }}
     >
       {children}

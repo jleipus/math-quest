@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchUserModel, resetUserModel } from "../lib/api";
-import { auth } from "../lib/firebase";
-import { useGame } from "../lib/gameContext";
+import { ensureSignedIn } from "../lib/firebase";
 import type { TopicRecord, DifficultyRecord } from "../lib/types";
 
 type Props = {
@@ -11,26 +10,18 @@ type Props = {
 };
 
 export default function UserModelModal({ onClose }: Props) {
-  const { localTopicRecords, resetLocalUserModel } = useGame();
   const [topics, setTopics] = useState<TopicRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user && !user.isAnonymous) {
-      // Signed-in user: fetch from Firestore via backend
-      fetchUserModel()
-        .then((data) => setTopics(data.topics))
-        .catch((e) => setError(e instanceof Error ? e.message : "Failed to load."))
-        .finally(() => setLoading(false));
-    } else {
-      // Anonymous user: use local model from sessionStorage
-      setTopics(localTopicRecords);
-      setLoading(false);
-    }
-  }, [localTopicRecords]);
+    ensureSignedIn()
+      .then(() => fetchUserModel())
+      .then((data) => setTopics(data.topics))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load."))
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -45,11 +36,7 @@ export default function UserModelModal({ onClose }: Props) {
     setResetting(true);
     setError(null);
     try {
-      const user = auth.currentUser;
-      if (user && !user.isAnonymous) {
-        await resetUserModel();
-      }
-      resetLocalUserModel();
+      await resetUserModel();
       setTopics([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset failed.");

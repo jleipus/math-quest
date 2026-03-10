@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from backend.config import get_settings
 from backend.models.game import Card, CardType, AttackSubtype, Task
-from backend.models.user_model import TopicRecord
 from backend.services.consts import (
     _ATTACK_SUBTYPES,
     _HEAL_NAMES,
@@ -19,11 +18,9 @@ def generate_hand(
     grade: str,
     uid: str | None = None,
     hand_size: int | None = None,
-    client_user_model: list[TopicRecord] | None = None,
 ) -> list[Card]:
     from backend.services.llm import llm_service
     from backend.services.curriculum import curriculum_service
-    from backend.services.user_model import user_model_to_profile_context
 
     settings = get_settings()
     if hand_size is None:
@@ -37,8 +34,6 @@ def generate_hand(
 
         user_model = firestore_user_model_service.get_or_create(uid)
         profile_context = user_model.get_profile_context()
-    elif client_user_model:
-        profile_context = user_model_to_profile_context(client_user_model)
 
     grade_topics = curriculum_service.get_all_topics(grade)
 

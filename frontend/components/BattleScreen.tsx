@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
 import { fetchHand } from "../lib/api";
@@ -13,6 +13,7 @@ import TaskModal, { type CardModalState } from "./TaskModal";
 import UserModelModal from "./UserModelModal";
 import PauseMenu from "./PauseMenu";
 import TutorialOverlay from "./TutorialOverlay";
+import SurveyModal from "./SurveyModal";
 
 type FloatingNumber = {
   id: number;
@@ -36,7 +37,6 @@ export default function BattleScreen() {
     recordDamage,
     advanceFloor,
     getWrongAttempts,
-    localTopicRecords,
   } = useGame();
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -54,6 +54,9 @@ export default function BattleScreen() {
   const [gameover, setGameover] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialShown = useRef(false);
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [surveySubmitted, setSurveySubmitted] = useState(false);
 
   useEffect(() => {
     if (gameover) router.push("/game/gameover");
@@ -67,11 +70,13 @@ export default function BattleScreen() {
     if (game && game.player_hp <= 0) setGameover(true);
   }, [game?.player_hp]);
 
-  // Show tutorial on the first turn of every new game
+  // Show tutorial once when the first hand arrives (floor 1, turn 1)
   useEffect(() => {
     if (!game?.hand?.length || game.floor !== 1 || game.turn !== 1) return;
+    if (tutorialShown.current) return;
+    tutorialShown.current = true;
     setShowTutorial(true);
-  }, [game?.hand?.length, game?.floor, game?.turn]);
+  }, [game?.turn, game?.floor]);
 
   useEffect(() => {
     if (!game?.hand?.length) return;
@@ -231,7 +236,6 @@ export default function BattleScreen() {
 
       const handResp = await fetchHand({
         grade: game.grade,
-        user_model: localTopicRecords.length > 0 ? localTopicRecords : undefined,
       });
       beginTurn(handResp.hand);
       setCardStates(new Map());
@@ -414,14 +418,34 @@ export default function BattleScreen() {
           </span>
         </div>
 
-        <button
-          data-tutorial="end-turn"
-          onClick={handleEndTurn}
-          disabled={endingTurn}
-          className="px-btn px-6 py-3 text-sm"
-        >
-          {endingTurn ? "…" : "End Turn ↩"}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          {!surveySubmitted && (
+            <button
+              onClick={() => setShowSurvey(true)}
+              className="font-pixel"
+              style={{
+                fontSize: "0.65rem",
+                background: "var(--px-panel)",
+                border: "2px solid var(--px-panel-border)",
+                boxShadow: "3px 3px 0 #1d0a1a",
+                color: "var(--px-text-dim)",
+                padding: "5px 10px",
+                letterSpacing: "0.06em",
+                cursor: "pointer",
+              }}
+            >
+              Feedback
+            </button>
+          )}
+          <button
+            data-tutorial="end-turn"
+            onClick={handleEndTurn}
+            disabled={endingTurn}
+            className="px-btn px-6 py-3 text-sm"
+          >
+            {endingTurn ? "…" : "End Turn ↩"}
+          </button>
+        </div>
       </div>
 
       {/* Hand area */}
@@ -460,6 +484,20 @@ export default function BattleScreen() {
       {showUserModel && <UserModelModal onClose={() => setShowUserModel(false)} />}
 
       {showMenu && <PauseMenu onResume={() => setShowMenu(false)} />}
+
+      {showSurvey && (
+        <SurveyModal
+          onClose={() => setShowSurvey(false)}
+          onSubmit={() => setSurveySubmitted(true)}
+          perfContext={{
+            grade: game.grade,
+            floor: game.floor,
+            turn: game.turn,
+            cards_played: game.cards_played,
+            help_requests: game.help_requests,
+          }}
+        />
+      )}
 
       {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
     </div>

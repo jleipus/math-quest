@@ -46,7 +46,6 @@ def fetch_hand(
         hand = generate_hand(
             grade=payload.grade,
             uid=uid,
-            client_user_model=payload.user_model,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
@@ -61,7 +60,7 @@ def record_answer(
     payload: RecordAnswerRequest,
     uid: str | None = Depends(verify_firebase_token),
 ) -> RecordAnswerResponse:
-    if uid:
+    if uid is not None:
         firestore_user_model_service.record_attempt(
             uid=uid,
             topic=payload.topic,
@@ -91,17 +90,14 @@ def request_hint(
     if payload.student_work:
         image_png = rasterize_strokes_to_png(payload.student_work, payload.canvas_width, payload.canvas_height)
 
-    if uid:
+    profile_context = ""
+    if uid is not None:
         profile_context = firestore_user_model_service.get_or_create(uid).get_profile_context()
         firestore_user_model_service.record_hint(
             uid=uid,
             topic=payload.topic,
             difficulty=payload.difficulty,
         )
-    else:
-        from backend.services.user_model import user_model_to_profile_context
-
-        profile_context = user_model_to_profile_context(payload.user_model) if payload.user_model else ""
 
     return llm_service.generate_guidance(
         question=payload.question,
