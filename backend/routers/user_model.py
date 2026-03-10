@@ -18,3 +18,13 @@ def get_user_model(
         raise HTTPException(status_code=401, detail="Sign in to view your profile.")
     model = firestore_user_model_service.get_or_create(uid)
     return UserModelResponse(topics=model.records)
+
+
+@router.delete("")
+def reset_user_model(
+    uid: str | None = Depends(verify_firebase_token),
+) -> dict:
+    if not uid:
+        raise HTTPException(status_code=401, detail="Sign in to reset your profile.")
+    firestore_user_model_service.reset(uid)
+    return {"ok": True}

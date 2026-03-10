@@ -7,6 +7,7 @@ import {
   type LocalUserModel,
   loadLocalUserModel,
   saveLocalUserModel,
+  clearLocalUserModel,
   recordAttemptLocal,
   recordHintLocal,
   toTopicRecords,
@@ -100,6 +101,7 @@ type GameContextValue = {
   // Local user model (for anonymous players)
   recordLocalAttempt: (topic: string, difficulty: string, correct: boolean) => void;
   recordLocalHint: (topic: string, difficulty: string) => void;
+  resetLocalUserModel: () => void;
   localTopicRecords: TopicRecord[];
 };
 
@@ -135,6 +137,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     },
     [setLocalModel],
   );
+
+  const resetLocalUserModel = useCallback(() => {
+    clearLocalUserModel();
+    setLocalModelRaw({ topics: {} });
+  }, []);
 
   const localTopicRecords = toTopicRecords(localModel);
 
@@ -274,6 +281,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         reset,
         recordLocalAttempt,
         recordLocalHint,
+        resetLocalUserModel,
         localTopicRecords,
       }}
     >
