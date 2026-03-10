@@ -12,6 +12,7 @@ import PlayerHPBar from "./PlayerHPBar";
 import TaskModal, { type CardModalState } from "./TaskModal";
 import UserModelModal from "./UserModelModal";
 import PauseMenu from "./PauseMenu";
+import TutorialOverlay from "./TutorialOverlay";
 
 type FloatingNumber = {
   id: number;
@@ -52,6 +53,7 @@ export default function BattleScreen() {
   const [turnMessageKey, setTurnMessageKey] = useState(0);
   const [gameover, setGameover] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (gameover) router.push("/game/gameover");
@@ -64,6 +66,12 @@ export default function BattleScreen() {
   useEffect(() => {
     if (game && game.player_hp <= 0) setGameover(true);
   }, [game?.player_hp]);
+
+  // Show tutorial on the first turn of every new game
+  useEffect(() => {
+    if (!game?.hand?.length || game.floor !== 1 || game.turn !== 1) return;
+    setShowTutorial(true);
+  }, [game?.hand?.length, game?.floor, game?.turn]);
 
   useEffect(() => {
     if (!game?.hand?.length) return;
@@ -83,8 +91,8 @@ export default function BattleScreen() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Let TaskModal and UserModelModal handle their own Escape
-      if (selectedCard || showUserModel) return;
+      // Let TaskModal, UserModelModal and TutorialOverlay handle their own interactions
+      if (selectedCard || showUserModel || showTutorial) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === "Escape") {
@@ -115,7 +123,7 @@ export default function BattleScreen() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedCard, showUserModel, showMenu, endingTurn, game?.hand, game?.energy]);
+  }, [selectedCard, showUserModel, showTutorial, showMenu, endingTurn, game?.hand, game?.energy]);
 
   if (!game) return null;
 
@@ -244,7 +252,9 @@ export default function BattleScreen() {
       {/* Top bar */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex flex-col gap-2">
-          <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+          <div data-tutorial="player-hp">
+            <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+          </div>
 
           {game.shield > 0 && (
             <div
@@ -282,6 +292,7 @@ export default function BattleScreen() {
           </div>
           <div className="flex gap-2">
             <button
+              data-tutorial="profile-btn"
               onClick={() => setShowUserModel(true)}
               className="font-pixel"
               style={{
@@ -319,12 +330,14 @@ export default function BattleScreen() {
 
       {/* Enemy area */}
       <div className="relative flex flex-1 items-center justify-center">
-        <EnemyDisplay
-          hp={game.enemy_hp}
-          maxHp={game.enemy_max_hp}
-          shake={enemyShake}
-          nextDamage={game.enemy_next_damage}
-        />
+        <div data-tutorial="enemy">
+          <EnemyDisplay
+            hp={game.enemy_hp}
+            maxHp={game.enemy_max_hp}
+            shake={enemyShake}
+            nextDamage={game.enemy_next_damage}
+          />
+        </div>
 
         {floatingNums.map((f) => (
           <div
@@ -401,13 +414,19 @@ export default function BattleScreen() {
           </span>
         </div>
 
-        <button onClick={handleEndTurn} disabled={endingTurn} className="px-btn px-6 py-3 text-sm">
+        <button
+          data-tutorial="end-turn"
+          onClick={handleEndTurn}
+          disabled={endingTurn}
+          className="px-btn px-6 py-3 text-sm"
+        >
           {endingTurn ? "…" : "End Turn ↩"}
         </button>
       </div>
 
       {/* Hand area */}
       <div
+        data-tutorial="hand"
         style={{
           background: "var(--px-panel)",
           border: "2px solid var(--px-panel-border)",
@@ -441,6 +460,8 @@ export default function BattleScreen() {
       {showUserModel && <UserModelModal onClose={() => setShowUserModel(false)} />}
 
       {showMenu && <PauseMenu onResume={() => setShowMenu(false)} />}
+
+      {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
     </div>
   );
 }
