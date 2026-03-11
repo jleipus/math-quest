@@ -28,8 +28,7 @@ class Settings(BaseSettings):
     claude_api_base: str = "https://api.anthropic.com/v1"
 
     # Game mechanics
-    default_hand_size: int = 5
-    max_energy: int = 3
+    hand_size: int = 5
 
     # RAG & user modelling
     rag_top_k: int = 3

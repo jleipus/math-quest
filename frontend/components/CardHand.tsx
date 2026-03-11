@@ -1,11 +1,12 @@
 "use client";
 
-import type { Card as CardType } from "../lib/types";
+import type { Card as CardInfo } from "../lib/types";
+import { canPlayCard } from "../lib/gameLogic";
 import Card from "./Card";
 
 type Props = {
-  hand: CardType[];
-  onClickCard: (card: CardType) => void; // Opens the task modal for any card
+  hand: CardInfo[];
+  onClickCard: (card: CardInfo) => void;
   playingCardId: string | null;
   energy: number;
 };
@@ -17,21 +18,20 @@ export default function CardHand({ hand, onClickCard, playingCardId, energy }: P
         className="font-pixel flex h-52 items-center justify-center text-sm"
         style={{ color: "var(--px-text-dim)" }}
       >
-        No cards — end your turn to draw a new hand.
+        No cards - end your turn to draw a new hand.
       </div>
     );
   }
 
   return (
     <div className="flex flex-wrap justify-center gap-4 px-2">
-      {hand.map((card, i) => (
+      {hand.map((card) => (
         <Card
           key={card.card_id}
           card={card}
-          index={i + 1}
           onClick={onClickCard}
           playing={playingCardId === card.card_id}
-          affordable={energy >= card.energy_cost}
+          affordable={canPlayCard(energy, card)}
           energyCost={card.energy_cost}
         />
       ))}

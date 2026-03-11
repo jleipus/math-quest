@@ -1,31 +1,23 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import type { Card, StartSessionResponse } from "./types";
-import { enemyDamageForFloor } from "./gameLogic";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+  use,
+} from "react";
+import type { Card } from "./types";
+import {
+  type GameState,
+  initGame as _initGame,
+  playCard as _playCard,
+  endTurn as _endTurn,
+  isGameOver as _isGameOver,
+} from "./gameLogic";
 import { ensureSignedIn } from "./firebase";
-
-type GameState = {
-  player_hp: number;
-  player_max_hp: number;
-  enemy_hp: number;
-  enemy_max_hp: number;
-  enemy_next_damage: number;
-  hand: Card[];
-  grade: string;
-  floor: number;
-  turn: number;
-  shield: number;
-  energy: number;
-  max_energy: number;
-
-  // Per-card wrong-attempt counters (card_id -> count)
-  wrong_attempts: Record<string, number>;
-
-  // Stats
-  cards_played: number;
-  help_requests: number;
-};
 
 const STORAGE_KEY = "mathquest_game";
 
@@ -52,17 +44,18 @@ function saveGame(state: GameState | null): void {
 }
 
 function usePersistedGame() {
-  const [game, setGameRaw] = useState<GameState | null>(null);
+  const [game, setGame] = useState<GameState | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setGameRaw(loadGame());
+    setGame(loadGame());
     setHydrated(true);
   }, []);
 
-  const setGame = useCallback(
+  const setGameCallback = useCallback(
+    // Takes either GameState object, or function that updates GameState
     (updater: GameState | null | ((prev: GameState | null) => GameState | null)) => {
-      setGameRaw((prev) => {
+      setGame((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
         saveGame(next);
         return next;
@@ -71,24 +64,18 @@ function usePersistedGame() {
     [],
   );
 
-  return [game, hydrated, setGame] as const;
+  return [game, hydrated, setGameCallback] as const;
 }
 
 type GameContextValue = {
   game: GameState | null;
   hydrated: boolean;
-  initGame: (session: StartSessionResponse, grade: string) => void;
-  beginTurn: (hand: Card[]) => void;
-  setPlayerHp: (hp: number) => void;
-  setEnemyHp: (hp: number, maxHp?: number) => void;
-  advanceFloor: (enemyHp: number, enemyMaxHp: number, newFloor: number) => void;
-  removeCard: (card_id: string) => void;
-  addShield: (amount: number) => void;
-  spendEnergy: (amount: number) => void;
-  recordDamage: (amount: number) => void;
-  recordHelp: () => void;
+  initGame: (grade: string, hand: Card[]) => void;
+  playCard: (card: Card, effectivePower: number) => void;
+  endTurn: (newHand: Card[]) => void;
   recordWrongAttempt: (card_id: string) => void;
   getWrongAttempts: (card_id: string) => number;
+  isGameOver: () => boolean;
   reset: () => void;
 };
 
@@ -97,113 +84,52 @@ const GameContext = createContext<GameContextValue | null>(null);
 export function GameProvider({ children }: { children: ReactNode }) {
   const [game, hydrated, setGame] = usePersistedGame();
 
-  // Ensure every visitor has a Firebase UID (anonymous if not signed in with Google)
+  // Ensure every visitor has a Firebase UID
   useEffect(() => {
-    ensureSignedIn().catch(() => {/* no-op: offline or misconfigured */});
+    ensureSignedIn().catch(() => {
+      /* no-op: offline or misconfigured */
+    });
   }, []);
 
   const initGame = useCallback(
-    (session: StartSessionResponse, grade: string) => {
-      setGame({
-        player_hp: 100,
-        player_max_hp: 100,
-        enemy_hp: 100,
-        enemy_max_hp: 100,
-        enemy_next_damage: enemyDamageForFloor(1),
-        hand: [],
-        grade,
-        floor: 1,
-        turn: 0,
-        shield: 0,
-        energy: session.max_energy,
-        max_energy: session.max_energy,
-        wrong_attempts: {},
-        cards_played: 0,
-        help_requests: 0,
+    (grade: string, hand: Card[]) => {
+      setGame({ ..._initGame(grade), hand });
+    },
+    [setGame],
+  );
+
+  const playCard = useCallback(
+    (card: Card, effectivePower: number) => {
+      setGame((g) => {
+        if (!g) return g;
+
+        return _playCard(g, card, effectivePower);
       });
     },
     [setGame],
   );
 
-  const beginTurn = useCallback(
-    (hand: Card[]) => {
-      setGame((g) =>
-        g
-          ? {
-              ...g,
-              hand,
-              energy: g.max_energy,
-              shield: 0,
-              turn: g.turn + 1,
-              enemy_next_damage: enemyDamageForFloor(g.floor),
-              wrong_attempts: {},
-            }
-          : g,
-      );
+  const endTurn = useCallback(
+    (newHand: Card[]) => {
+      setGame((g) => {
+        if (!g) return g;
+
+        return _endTurn(g, newHand);
+      });
     },
     [setGame],
   );
-
-  const setPlayerHp = useCallback(
-    (hp: number) => setGame((g) => (g ? { ...g, player_hp: hp } : g)),
-    [setGame],
-  );
-
-  const setEnemyHp = useCallback(
-    (hp: number, maxHp?: number) => {
-      setGame((g) => (g ? { ...g, enemy_hp: hp, enemy_max_hp: maxHp ?? g.enemy_max_hp } : g));
-    },
-    [setGame],
-  );
-
-  const advanceFloor = useCallback(
-    (enemyHp: number, enemyMaxHp: number, newFloor: number) => {
-      setGame((g) =>
-        g ? { ...g, floor: newFloor, enemy_hp: enemyHp, enemy_max_hp: enemyMaxHp } : g,
-      );
-    },
-    [setGame],
-  );
-
-  const removeCard = useCallback(
-    (card_id: string) => {
-      setGame((g) => (g ? { ...g, hand: g.hand.filter((c) => c.card_id !== card_id) } : g));
-    },
-    [setGame],
-  );
-
-  const addShield = useCallback(
-    (amount: number) => setGame((g) => (g ? { ...g, shield: g.shield + amount } : g)),
-    [setGame],
-  );
-
-  const spendEnergy = useCallback(
-    (amount: number) => {
-      setGame((g) => (g ? { ...g, energy: Math.max(0, g.energy - amount) } : g));
-    },
-    [setGame],
-  );
-
-  const recordDamage = useCallback(
-    (_amount: number) => {
-      setGame((g) => (g ? { ...g, cards_played: g.cards_played + 1 } : g));
-    },
-    [setGame],
-  );
-
-  const recordHelp = useCallback(() => {
-    setGame((g) => (g ? { ...g, help_requests: g.help_requests + 1 } : g));
-  }, [setGame]);
 
   const recordWrongAttempt = useCallback(
     (card_id: string) => {
       setGame((g) => {
         if (!g) return g;
+
         return {
           ...g,
-          wrong_attempts: {
-            ...g.wrong_attempts,
-            [card_id]: (g.wrong_attempts[card_id] ?? 0) + 1,
+          wrongAttempts: {
+            ...g.wrongAttempts,
+            [card_id]: (g.wrongAttempts[card_id] ?? 0) + 1,
           },
         };
       });
@@ -212,9 +138,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   );
 
   const getWrongAttempts = useCallback(
-    (card_id: string): number => game?.wrong_attempts[card_id] ?? 0,
+    (card_id: string): number => game?.wrongAttempts[card_id] ?? 0,
     [game],
   );
+
+  const isGameOver = useCallback((): boolean => _isGameOver(game!), [game]);
 
   const reset = useCallback(() => setGame(null), [setGame]);
 
@@ -224,17 +152,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         game,
         hydrated,
         initGame,
-        beginTurn,
-        setPlayerHp,
-        setEnemyHp,
-        advanceFloor,
-        removeCard,
-        addShield,
-        spendEnergy,
-        recordDamage,
-        recordHelp,
+        playCard,
+        endTurn,
         recordWrongAttempt,
         getWrongAttempts,
+        isGameOver,
         reset,
       }}
     >

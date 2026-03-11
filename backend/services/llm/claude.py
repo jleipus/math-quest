@@ -1,5 +1,6 @@
 import base64
 import requests
+from fastapi import HTTPException
 
 from backend.config import get_settings
 from backend.services.llm.base import LLMProvider
@@ -56,6 +57,8 @@ class ClaudeProvider(LLMProvider):
             json=payload,
             timeout=25,
         )
+        if response.status_code == 529:
+            raise HTTPException(status_code=503, detail="The AI service is overloaded - please try again in a moment.")
         response.raise_for_status()
         return ClaudeProvider._extract_text(response.json())
 

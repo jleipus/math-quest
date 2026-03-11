@@ -1,7 +1,5 @@
 import { getIdToken } from "./firebase";
 import type {
-  StartSessionRequest,
-  StartSessionResponse,
   FetchHandRequest,
   FetchHandResponse,
   RecordAnswerRequest,
@@ -12,10 +10,6 @@ import type {
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-
-export async function startSession(payload: StartSessionRequest): Promise<StartSessionResponse> {
-  return post<StartSessionResponse>("/game/start", payload);
-}
 
 export async function fetchHand(payload: FetchHandRequest): Promise<FetchHandResponse> {
   return post<FetchHandResponse>("/game/hand", payload);

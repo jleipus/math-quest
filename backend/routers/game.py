@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.config import get_settings
 from backend.models.assistant import HintRequest, HintResponse
 from backend.models.game import (
     FetchHandRequest,
     FetchHandResponse,
     RecordAnswerRequest,
     RecordAnswerResponse,
-    StartSessionRequest,
-    StartSessionResponse,
 )
 from backend.security import limiter, verify_firebase_token
 from backend.services.curriculum import curriculum_service
@@ -18,18 +15,6 @@ from backend.services.llm import llm_service
 from backend.services.vision import rasterize_strokes_to_png
 
 router = APIRouter(prefix="/game", tags=["game"])
-
-
-@router.post(
-    "/start",
-    response_model=StartSessionResponse,
-)
-def start_session(
-    payload: StartSessionRequest,
-    uid: str | None = Depends(verify_firebase_token),
-) -> StartSessionResponse:
-    settings = get_settings()
-    return StartSessionResponse(max_energy=settings.max_energy)
 
 
 @router.post(
@@ -104,6 +89,6 @@ def request_hint(
         context=context,
         image_png=image_png,
         profile_context=profile_context,
-        previous_questions=payload.previous_questions or None,
+        previous_hints=payload.previous_hints or None,
         session_id=uid or "anonymous",
     )

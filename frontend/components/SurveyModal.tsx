@@ -1,25 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, ensureSignedIn, submitSurvey, type SurveyAnswers } from "../lib/firebase";
-import type { SurveyPayload } from "../lib/firebase";
+import { ensureSignedIn, submitSurvey, type SurveyAnswers } from "../lib/firebase";
 
-const SURVEY_SCHEMA_VERSION = 1;
+const SURVEY_SCHEMA_VERSION = 2;
 
 const QUESTIONS: { id: number; text: string }[] = [
   { id: 1, text: "How would you rate your math skill level?" },
   { id: 2, text: "How difficult do you find the math tasks?" },
   { id: 3, text: "How helpful are the hints when you use them?" },
   { id: 4, text: "How likely are you to play this in your spare time?" },
+  { id: 5, text: "How stressed do you feel playing the game?" },
+];
+
+const GENDER_OPTIONS = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
 ];
 
 type Props = {
   onClose: () => void;
   onSubmit?: () => void;
-  perfContext: Omit<SurveyPayload, "answers" | "uid" | "is_anonymous" | "schema_version">;
 };
 
-export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
+export default function SurveyModal({ onClose, onSubmit }: Props) {
   const [answers, setAnswers] = useState<Partial<SurveyAnswers>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -33,7 +39,11 @@ export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const allAnswered = QUESTIONS.every((q) => answers[q.id] !== undefined);
+  const allAnswered =
+    QUESTIONS.every((q) => answers[q.id] !== undefined) &&
+    answers["gender"] !== undefined &&
+    answers["age"] !== undefined &&
+    String(answers["age"]).trim() !== "";
 
   async function handleSubmit() {
     if (!allAnswered) return;
@@ -42,11 +52,9 @@ export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
     try {
       const user = await ensureSignedIn();
       await submitSurvey({
-        ...perfContext,
+        uid: user.uid,
         schema_version: SURVEY_SCHEMA_VERSION,
         answers: answers as SurveyAnswers,
-        uid: user.uid,
-        is_anonymous: user.isAnonymous,
       });
       setSubmitted(true);
       onSubmit?.();
@@ -134,8 +142,8 @@ export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
                           onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: val }))}
                           className="font-pixel"
                           style={{
-                            width: 44,
-                            height: 44,
+                            width: 36,
+                            height: 36,
                             fontSize: "0.9rem",
                             background: selected ? "var(--px-gold)" : "#2a0d26",
                             border: `2px solid ${selected ? "var(--px-gold)" : "var(--px-panel-border)"}`,
@@ -152,6 +160,67 @@ export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
                   </div>
                 </div>
               ))}
+
+              {/* Gender */}
+              <div>
+                <p
+                  className="font-pixel mb-3"
+                  style={{ fontSize: "0.72rem", color: "var(--px-text)", lineHeight: 1.6 }}
+                >
+                  What is your gender?
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {GENDER_OPTIONS.map(({ value, label }) => {
+                    const selected = answers["gender"] === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => setAnswers((prev) => ({ ...prev, gender: value }))}
+                        className="font-pixel"
+                        style={{
+                          fontSize: "0.65rem",
+                          padding: "8px 12px",
+                          background: selected ? "var(--px-gold)" : "#2a0d26",
+                          border: `2px solid ${selected ? "var(--px-gold)" : "var(--px-panel-border)"}`,
+                          color: selected ? "#1d0a1a" : "var(--px-text-dim)",
+                          cursor: "pointer",
+                          boxShadow: selected ? "2px 2px 0 #0a0008" : "none",
+                          transition: "background 0.1s, color 0.1s",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Age */}
+              <div>
+                <p
+                  className="font-pixel mb-3"
+                  style={{ fontSize: "0.72rem", color: "var(--px-text)", lineHeight: 1.6 }}
+                >
+                  What is your age?
+                </p>
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={answers["age"] !== undefined ? String(answers["age"]) : ""}
+                  onChange={(e) => setAnswers((prev) => ({ ...prev, age: e.target.value }))}
+                  className="font-pixel"
+                  style={{
+                    width: 90,
+                    padding: "8px 10px",
+                    fontSize: "0.8rem",
+                    background: "#2a0d26",
+                    border: "2px solid var(--px-panel-border)",
+                    color: "var(--px-text)",
+                    outline: "none",
+                  }}
+                />
+              </div>
             </div>
 
             {error && (
@@ -165,7 +234,10 @@ export default function SurveyModal({ onClose, onSubmit, perfContext }: Props) {
                 className="font-pixel"
                 style={{ fontSize: "0.65rem", color: "var(--px-text-dim)" }}
               >
-                {Object.keys(answers).length}/{QUESTIONS.length} answered
+                {QUESTIONS.filter((q) => answers[q.id] !== undefined).length +
+                  (answers["gender"] !== undefined ? 1 : 0) +
+                  (answers["age"] !== undefined && String(answers["age"]).trim() !== "" ? 1 : 0)}
+                /{QUESTIONS.length + 2} answered
               </span>
               <button
                 onClick={handleSubmit}

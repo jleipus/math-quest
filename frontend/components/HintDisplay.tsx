@@ -5,7 +5,7 @@ type Props = {
   loading: boolean;
 };
 
-export default function AgentChat({ messages, loading }: Props) {
+export default function HintDisplay({ messages, loading }: Props) {
   return (
     <div
       style={{

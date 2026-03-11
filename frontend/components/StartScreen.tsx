@@ -4,13 +4,13 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { type User } from "firebase/auth";
-import { fetchGrades, startSession, fetchHand } from "../lib/api";
+import { fetchGrades, fetchHand } from "../lib/api";
 import { useGame } from "../lib/gameContext";
 import AuthPanel from "./AuthPanel";
 
 export default function StartScreen() {
   const router = useRouter();
-  const { initGame: initGameCtx, beginTurn } = useGame();
+  const { initGame } = useGame();
 
   const [grades, setGrades] = useState<string[]>([]);
   const [grade, setGrade] = useState("");
@@ -35,16 +35,17 @@ export default function StartScreen() {
 
     setLoading(true);
     setError(null);
-    try {
-      const session = await startSession({ grade });
-      initGameCtx(session, grade);
 
+    try {
       const drawResp = await fetchHand({ grade });
-      beginTurn(drawResp.hand);
+
+      initGame(grade, drawResp.hand);
 
       router.push("/game");
-    } catch {
-      setError("Could not connect to the server. Is the backend running?");
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : "Could not connect to the server. Is the backend running?",
+      );
     } finally {
       setLoading(false);
     }
@@ -133,7 +134,7 @@ export default function StartScreen() {
             disabled={loading || !grade}
             className="px-btn w-full py-4 text-sm"
           >
-            {loading ? "Loading…" : "▶  Start Game"}
+            {loading ? "Loading..." : "> Start Game"}
           </button>
         </div>
 

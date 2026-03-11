@@ -22,7 +22,7 @@ class HintRequest(BaseModel):
     student_work: list[Stroke] | None = None
     canvas_width: int = 512
     canvas_height: int = 512
-    previous_questions: list[str] = Field(default_factory=list)
+    previous_hints: list[str] = Field(default_factory=list)
 
 
 class HintResponse(BaseModel):

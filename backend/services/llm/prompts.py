@@ -49,15 +49,15 @@ def build_guide_user_text(
     context: str,
     has_image: bool,
     profile_context: str = "",
-    previous_questions: list[str] | None = None,
+    previous_hints: list[str] | None = None,
 ) -> str:
     text = f"""Curriculum context:\n{context}\n\nMath task the student is working on:\n{question}\n\n"""
     if has_image:
         text += "Consider the students submitted handwritten work (see image).\n\n"
     if profile_context:
         text += f"Student profile:\n{profile_context}\n\n"
-    if previous_questions:
-        history = "\n".join(f"- {q}" for q in previous_questions)
+    if previous_hints:
+        history = "\n".join(f"- {q}" for q in previous_hints)
         text += f"Previous guiding questions already given to this student:\n{history}\n\n"
     return text
 

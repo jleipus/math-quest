@@ -1,14 +1,16 @@
 "use client";
 
+import { fractionColor } from "../lib/theme";
+
 type Props = {
   hp: number;
   maxHp: number;
   flash: boolean;
 };
 
-export default function PlayerHPBar({ hp, maxHp, flash }: Props) {
+export default function PlayerDisplay({ hp, maxHp, flash }: Props) {
   const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
-  const barColor = pct > 60 ? "#4caf50" : pct > 30 ? "#f5c842" : "#e05050";
+  const barColor = fractionColor(pct / 100);
 
   return (
     <div

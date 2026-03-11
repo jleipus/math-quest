@@ -2,23 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
+import UserProfile from "./UserProfile";
 
 export default function GameOverScreen() {
   const router = useRouter();
-  const { game, reset } = useGame();
+  const { reset } = useGame();
 
   function handleTryAgain() {
     reset();
     router.push("/");
   }
-
-  const stats = game
-    ? [
-        { label: "Floor\nreached", value: game.floor },
-        { label: "Cards\nplayed", value: game.cards_played },
-        { label: "Hints\nused", value: game.help_requests },
-      ]
-    : [];
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -51,29 +44,8 @@ export default function GameOverScreen() {
           You have been defeated!
         </p>
 
-        {/* Stats */}
-        <div className="flex gap-4 justify-center">
-          {stats.map(({ label, value }) => (
-            <div
-              key={label}
-              className="flex flex-col items-center"
-              style={{
-                background: "#2a0d26",
-                border: "2px solid #6a2020",
-                padding: "16px 20px",
-              }}
-            >
-              <span className="font-pixel text-2xl" style={{ color: "#e08080" }}>
-                {value}
-              </span>
-              <span
-                className="font-pixel mt-2 text-center leading-loose"
-                style={{ fontSize: "0.45rem", color: "var(--px-text-dim)", whiteSpace: "pre-line" }}
-              >
-                {label}
-              </span>
-            </div>
-          ))}
+        <div className="w-full">
+          <UserProfile />
         </div>
 
         <button onClick={handleTryAgain} className="px-btn w-full py-4 text-sm">
