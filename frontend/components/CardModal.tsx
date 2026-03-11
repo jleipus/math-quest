@@ -5,37 +5,40 @@ import type { Card, Stroke } from "../lib/types";
 import { recordAnswer, requestHint } from "../lib/api";
 import { checkAnswer, penalisedPower } from "../lib/gameLogic";
 import { useGame } from "../lib/gameContext";
-import AgentChat from "./AgentChat";
+import HintDisplay from "./HintDisplay";
 import DrawingCanvas, { type DrawingCanvasHandle } from "./DrawingCanvas";
 
+/** Persisted state so that closing card modal preserves canvas and message history. */
 export type CardModalState = {
   answer: string;
   messages: string[];
   solved: boolean;
   strokes: Stroke[];
+  wrongAttempts: number;
 };
 
 type Props = {
   card: Card;
   savedState?: CardModalState;
-  /** Current wrong-attempt count for this card. */
-  wrongAttempts: number;
   onPlayCard: (card: Card, effectivePower: number) => void;
   onClose: (state: CardModalState) => void;
 };
 
-const cardTypeInfo: Record<string, { label: string; color: string }> = {
-  attack: { label: "Attack", color: "#e05050" },
-  heal: { label: "Heal", color: "#4caf50" },
-  shield: { label: "Shield", color: "#6080d0" },
+/** Used for feedback pop-up when answer is submitted. */
+type feedbackProps = {
+  type: "error" | "success";
+  text: string;
 };
 
-export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard, onClose }: Props) {
-  const {
-    game,
-    recordHelp,
-    recordWrongAttempt,
-  } = useGame();
+// TODO: should be global info
+const cardTypeInfo: Record<string, { label: string; color: string }> = {
+  attack: { label: "Attack", color: "#e05050" },
+  heal: { label: "Hela", color: "#4caf50" },
+  shield: { label: "Sköld", color: "#6080d0" },
+};
+
+export default function CardModal({ card, savedState, onPlayCard, onClose }: Props) {
+  const { game, recordWrongAttempt } = useGame();
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,17 +46,22 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     inputRef.current?.focus();
   }, []);
 
+  // Answer player has entered into input box.
   const [answer, setAnswer] = useState(savedState?.answer ?? "");
+  // Whether answer submission is being processed.
   const [submitting, setSubmitting] = useState(false);
-  const [helpLoading, setHelpLoading] = useState(false);
+  // Whether hint request is being processed.
+  const [hintLoading, setHintLoading] = useState(false);
+  // Hint messages that have been received.
   const [messages, setMessages] = useState<string[]>(savedState?.messages ?? []);
-  const [feedback, setFeedback] = useState<{ type: "error" | "success"; text: string } | null>(
-    null,
-  );
+  // Current feedback pop-up.
+  const [feedback, setFeedback] = useState<feedbackProps | null>(null);
+  // Whether task has been solved.
   const [solved, setSolved] = useState(savedState?.solved ?? false);
-  const [localWrongAttempts, setLocalWrongAttempts] = useState(wrongAttempts);
+  // Incorrect answer attempts.
+  const [wrongAttempts, setWrongAttempts] = useState(savedState?.wrongAttempts ?? 0);
 
-  const currentPower = penalisedPower(card.card_power, localWrongAttempts);
+  const currentPower = penalisedPower(card.card_power, wrongAttempts);
 
   function collectState(): CardModalState {
     return {
@@ -61,6 +69,7 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
       messages,
       solved,
       strokes: canvasRef.current?.getStrokes() ?? [],
+      wrongAttempts: wrongAttempts,
     };
   }
 
@@ -73,12 +82,14 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") handleClose();
     }
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [solved, answer, messages, localWrongAttempts]);
+  }, [solved, answer, messages, wrongAttempts]);
 
-  async function handleSubmit() {
-    if (!game || !answer.trim() || solved) return;
+  async function handleSubmitAnswer() {
+    if (!game || !answer.trim() || solved || submitting) return;
+
     setSubmitting(true);
     setFeedback(null);
 
@@ -86,18 +97,19 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
 
     if (correct) {
       setSolved(true);
-      setFeedback({ type: "success", text: "Correct!" });
+      setFeedback({ type: "success", text: "Rätt!" });
     } else {
-      const newWrongs = localWrongAttempts + 1;
-      setLocalWrongAttempts(newWrongs);
-      recordWrongAttempt(card.card_id);
-      const newPower = penalisedPower(card.card_power, newWrongs);
+      const newWrongAttempts = wrongAttempts + 1;
+      const newPower = penalisedPower(card.card_power, newWrongAttempts);
       const penalty = card.card_power - newPower;
       const penaltyText = penalty > 0 ? ` (-${penalty} power)` : "";
-      setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
+
+      recordWrongAttempt(card.card_id);
+      setWrongAttempts(newWrongAttempts);
+      setFeedback({ type: "error", text: `Inte riktigt - försök igen.${penaltyText}` });
     }
 
-    recordAnswer({
+    await recordAnswer({
       topic: card.task.topic,
       difficulty: card.task.difficulty,
       correct,
@@ -108,10 +120,11 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     setSubmitting(false);
   }
 
-  async function handleHelp() {
+  async function handleRequestHint() {
     if (!game || !canvasRef.current) return;
-    setHelpLoading(true);
-    recordHelp();
+
+    setHintLoading(true);
+
     try {
       const { width, height } = canvasRef.current.getSize();
       const result = await requestHint({
@@ -122,13 +135,16 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
         student_work: canvasRef.current.getStrokes(),
         canvas_width: width,
         canvas_height: height,
-        previous_questions: messages.length > 0 ? messages : undefined,
+        previous_hints: messages.length > 0 ? messages : undefined,
       });
       setMessages((prev) => [...prev, result.guiding_question]);
     } catch (e) {
-      setFeedback({ type: "error", text: e instanceof Error ? e.message : "Help request failed." });
+      setFeedback({
+        type: "error",
+        text: e instanceof Error ? e.message : "Hjälpbegäran misslyckades.",
+      });
     } finally {
-      setHelpLoading(false);
+      setHintLoading(false);
     }
   }
 
@@ -138,6 +154,7 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(10,0,8,0.85)", backdropFilter: "blur(4px)" }}
+      // Clicking on background closes modal.
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
@@ -157,7 +174,7 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-4">
             <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
-              TASK - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
+              UPPGIFT - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
             </span>
             <span className="font-pixel text-sm" style={{ color: typeInfo.color }}>
               {typeInfo.label} - {currentPower} pts
@@ -175,7 +192,7 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
               }}
               aria-label="Close"
             >
-              {solved ? "▶ Play Card" : "✕"}
+              {solved ? "> Spela kort" : "X"}
             </button>
           </div>
           <h2
@@ -201,9 +218,9 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
                 if (!solved) setAnswer(e.target.value);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
+                if (e.key === "Enter") handleSubmitAnswer();
               }}
-              placeholder="Your answer…"
+              placeholder="Ditt svar..."
               disabled={solved}
               className="font-pixel flex-1 px-5 py-4 text-lg"
               style={{
@@ -216,11 +233,11 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
             />
             {!solved && (
               <button
-                onClick={handleSubmit}
+                onClick={handleSubmitAnswer}
                 disabled={submitting || !answer.trim()}
                 className="px-btn px-8 py-4 text-base"
               >
-                {submitting ? "…" : "Submit"}
+                {submitting ? "..." : "Skicka"}
               </button>
             )}
           </div>
@@ -255,7 +272,7 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
               className="font-pixel mb-3 text-sm"
               style={{ color: "var(--px-text-dim)", flexShrink: 0 }}
             >
-              ✏️ Work it out here
+              ✏️ Räkna ut det här
             </p>
             <div style={{ border: "2px solid var(--px-panel-border)", flex: 1, minHeight: 0 }}>
               <DrawingCanvas ref={canvasRef} initialStrokes={savedState?.strokes} />
@@ -273,24 +290,24 @@ export default function TaskModal({ card, savedState, wrongAttempts, onPlayCard,
             }}
           >
             <button
-              onClick={handleHelp}
-              disabled={helpLoading || solved}
+              onClick={handleRequestHint}
+              disabled={hintLoading || solved}
               className="font-pixel w-full text-sm"
               style={{
                 background: "rgba(60,30,60,0.7)",
                 border: "2px solid var(--px-panel-border)",
                 color: "var(--px-pink)",
                 padding: "14px 16px",
-                cursor: helpLoading || solved ? "not-allowed" : "pointer",
-                opacity: helpLoading || solved ? 0.4 : 1,
+                cursor: hintLoading || solved ? "not-allowed" : "pointer",
+                opacity: hintLoading || solved ? 0.4 : 1,
                 boxShadow: "3px 3px 0 #0a0008",
                 flexShrink: 0,
               }}
             >
-              🤔 Ask for a hint
+              🤔 Be om en ledtråd
             </button>
 
-            <AgentChat messages={messages} loading={helpLoading} />
+            <HintDisplay messages={messages} loading={hintLoading} />
           </div>
         </div>
       </div>

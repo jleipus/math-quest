@@ -29,7 +29,7 @@ export default function AuthPanel({ onAuthChange }: Props) {
     } catch (e: unknown) {
       const code = (e as { code?: string }).code;
       if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
-        setError(e instanceof Error ? e.message : "Sign-in failed.");
+        setError(e instanceof Error ? e.message : "Inloggning misslyckades.");
       }
     } finally {
       setBusy(false);
@@ -42,7 +42,7 @@ export default function AuthPanel({ onAuthChange }: Props) {
     try {
       await signOut();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-out failed.");
+      setError(e instanceof Error ? e.message : "Utloggning misslyckades.");
     } finally {
       setBusy(false);
     }
@@ -72,13 +72,13 @@ export default function AuthPanel({ onAuthChange }: Props) {
           className="font-pixel text-sm"
           style={{ color: "var(--px-text-dim)", letterSpacing: "0.06em" }}
         >
-          SIGNED IN
+          INLOGGAD
         </p>
         <p className="font-pixel text-sm" style={{ color: "var(--px-gold)" }}>
           {user.displayName ?? user.email ?? "Google account"}
         </p>
         <p className="font-pixel text-xs" style={{ color: "var(--px-text-dim)", lineHeight: 2 }}>
-          Progress is saved between sessions.
+          Framsteg sparas mellan sessioner.
         </p>
         <button
           onClick={handleSignOut}
@@ -93,7 +93,7 @@ export default function AuthPanel({ onAuthChange }: Props) {
             opacity: busy ? 0.5 : 1,
           }}
         >
-          {busy ? "…" : "Sign out"}
+          {busy ? "..." : "Logga ut"}
         </button>
       </div>
     );
@@ -106,11 +106,11 @@ export default function AuthPanel({ onAuthChange }: Props) {
         className="font-pixel text-sm"
         style={{ color: "var(--px-text-dim)", letterSpacing: "0.06em" }}
       >
-        SIGN IN (OPTIONAL)
+        LOGGA IN (VALFRITT)
       </p>
       <p className="font-pixel text-xs" style={{ color: "var(--px-text-dim)", lineHeight: 2 }}>
-        Sign in to save your progress across sessions. Otherwise, play as guest, but history is lost
-        when you quit.
+        Logga in för att spara dina framsteg mellan sessioner. Annars kan du spela som gäst, men
+        historiken försvinner när du avslutar.
       </p>
 
       {error && (
@@ -139,7 +139,7 @@ export default function AuthPanel({ onAuthChange }: Props) {
           opacity: busy ? 0.5 : 1,
         }}
       >
-        {busy ? "Opening…" : "▶  Sign in with Google"}
+        {busy ? "Öppnar..." : "> Logga in med Google"}
       </button>
     </div>
   );

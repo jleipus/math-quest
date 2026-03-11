@@ -153,7 +153,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     };
   }, []);
 
-  useImperativeHandle(ref, () => ({ getStrokes: () => strokes, getSize, clear }), [strokes, getSize, clear]);
+  useImperativeHandle(ref, () => ({ getStrokes: () => strokes, getSize, clear }), [
+    strokes,
+    getSize,
+    clear,
+  ]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", background: "#f5f0f8" }}>

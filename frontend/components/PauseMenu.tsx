@@ -46,7 +46,7 @@ export default function PauseMenu({ onResume }: Props) {
       >
         {/* Resume */}
         <button onClick={onResume} className="px-btn w-full py-4 text-sm">
-          Resume
+          Fortsätt
         </button>
 
         {/* Quit to start page */}
@@ -62,7 +62,7 @@ export default function PauseMenu({ onResume }: Props) {
             boxShadow: "3px 3px 0 #0a0008",
           }}
         >
-          Quit to Start
+          Avsluta till start
         </button>
       </div>
     </div>

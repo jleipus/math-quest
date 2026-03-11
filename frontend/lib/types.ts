@@ -31,14 +31,6 @@ export type Card = {
   task: Task;
 };
 
-export type StartSessionRequest = {
-  grade: string;
-};
-
-export type StartSessionResponse = {
-  max_energy: number;
-};
-
 export type FetchHandRequest = {
   grade: string;
 };
@@ -65,7 +57,7 @@ export type HintRequest = {
   student_work?: Stroke[];
   canvas_width?: number;
   canvas_height?: number;
-  previous_questions?: string[];
+  previous_hints?: string[];
 };
 
 export type HintResponse = {

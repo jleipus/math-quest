@@ -26,14 +26,6 @@ class Card(BaseModel):
     task: Task
 
 
-class StartSessionRequest(BaseModel):
-    grade: str = Field(min_length=1)
-
-
-class StartSessionResponse(BaseModel):
-    max_energy: int
-
-
 class FetchHandRequest(BaseModel):
     grade: str = Field(min_length=1)
 

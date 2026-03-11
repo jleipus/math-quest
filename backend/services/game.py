@@ -24,7 +24,7 @@ def generate_hand(
 
     settings = get_settings()
     if hand_size is None:
-        hand_size = settings.default_hand_size
+        hand_size = settings.hand_size
 
     rng = random.Random()
 

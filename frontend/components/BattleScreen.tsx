@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "../lib/gameContext";
 import { fetchHand } from "../lib/api";
-import { resolveEnemyAttack, applyCard, enemyHpForFloor } from "../lib/gameLogic";
+import { canPlayCard } from "../lib/gameLogic";
 import type { Card } from "../lib/types";
+import { cardTypeTheme } from "../lib/theme";
 import CardHand from "./CardHand";
 import EnemyDisplay from "./EnemyDisplay";
-import PlayerHPBar from "./PlayerHPBar";
-import TaskModal, { type CardModalState } from "./TaskModal";
+import PlayerDisplay from "./PlayerDisplay";
+import CardModal, { type CardModalState } from "./CardModal";
 import UserModelModal from "./UserModelModal";
 import PauseMenu from "./PauseMenu";
 import TutorialOverlay from "./TutorialOverlay";
@@ -20,24 +21,13 @@ type FloatingNumber = {
   value: number;
   x: number;
   color: string;
-  prefix: string;
 };
 
 export default function BattleScreen() {
   const router = useRouter();
-  const {
-    game,
-    hydrated,
-    setEnemyHp,
-    setPlayerHp,
-    beginTurn,
-    removeCard,
-    addShield,
-    spendEnergy,
-    recordDamage,
-    advanceFloor,
-    getWrongAttempts,
-  } = useGame();
+  const { game, hydrated, playCard, endTurn, getWrongAttempts, isGameOver } = useGame();
+
+  // TODO: add short comment for each useState and useEffect
 
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [cardStates, setCardStates] = useState<Map<string, CardModalState>>(new Map());
@@ -54,9 +44,10 @@ export default function BattleScreen() {
   const [gameover, setGameover] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
-  const tutorialShown = useRef(false);
   const [showSurvey, setShowSurvey] = useState(false);
   const [surveySubmitted, setSurveySubmitted] = useState(false);
+
+  const tutorialShown = useRef(false);
 
   useEffect(() => {
     if (gameover) router.push("/game/gameover");
@@ -67,19 +58,21 @@ export default function BattleScreen() {
   }, [hydrated, game, router]);
 
   useEffect(() => {
-    if (game && game.player_hp <= 0) setGameover(true);
-  }, [game?.player_hp]);
+    if (game && isGameOver()) setGameover(true);
+  }, [game?.playerHP]);
 
   // Show tutorial once when the first hand arrives (floor 1, turn 1)
   useEffect(() => {
     if (!game?.hand?.length || game.floor !== 1 || game.turn !== 1) return;
     if (tutorialShown.current) return;
+
     tutorialShown.current = true;
     setShowTutorial(true);
   }, [game?.turn, game?.floor]);
 
   useEffect(() => {
     if (!game?.hand?.length) return;
+
     console.groupCollapsed(`[MathQuest] Floor ${game.floor}, Turn ${game.turn}`);
     console.table(
       game.hand.map((card) => ({
@@ -96,30 +89,31 @@ export default function BattleScreen() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Let TaskModal, UserModelModal and TutorialOverlay handle their own interactions
       if (selectedCard || showUserModel || showTutorial) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
+      // Open/close menu on `Escape`
       if (e.key === "Escape") {
         e.preventDefault();
         setShowMenu((prev) => !prev);
         return;
       }
 
-      // Remaining shortcuts are suppressed while the pause menu is open
+      // If menu is open, ignore other keypresses
       if (showMenu) return;
 
+      // End turn on `Space`
       if (e.code === "Space") {
         e.preventDefault();
         if (!endingTurn) handleEndTurn();
         return;
       }
 
-      // Num keys: open task modal
+      // Open card on number
       const digit = parseInt(e.key, 10);
       if (!isNaN(digit) && digit >= 1 && digit <= 9 && game) {
         const card = game.hand[digit - 1];
-        if (card && game.energy >= card.energy_cost && !endingTurn) {
+        if (card && canPlayCard(game.energy, card) && !endingTurn && game.enemyHP > 0) {
           e.preventDefault();
           setSelectedCard(card);
         }
@@ -132,19 +126,21 @@ export default function BattleScreen() {
 
   if (!game) return null;
 
-  function addFloatingNumber(value: number, color: string, prefix: string) {
+  /** Display pop-up info text that dissapears after 2 seconds. */
+  function addFloatingNumber(value: number, color: string) {
     const id = floatCounter;
     setFloatCounter((n) => n + 1);
-    setFloatingNums((prev) => [...prev, { id, value, x: 38 + Math.random() * 24, color, prefix }]);
+    setFloatingNums((prev) => [...prev, { id, value, x: 38 + Math.random() * 24, color }]);
     setTimeout(() => setFloatingNums((prev) => prev.filter((f) => f.id !== id)), 2000);
   }
 
+  /** Handler called by card modal when task is solved and window is closed. */
   function handlePlayCard(card: Card, effectivePower: number) {
     if (!game) return;
 
-    if (game.energy < card.energy_cost) {
+    if (!canPlayCard(game.energy, card)) {
       setError(
-        `Not enough energy! This card costs ${card.energy_cost} energy (you have ${game.energy}).`,
+        `Inte tillräckligt med energi! Det här kortet kostar ${card.energy_cost} energi (du har ${game!.energy}).`,
       );
       return;
     }
@@ -152,37 +148,15 @@ export default function BattleScreen() {
     setError(null);
     setPlayingCardId(card.card_id);
 
-    const result = applyCard(
-      card,
-      effectivePower,
-      game.enemy_hp,
-      game.player_hp,
-      game.player_max_hp,
-    );
+    playCard(card, effectivePower);
 
-    spendEnergy(card.energy_cost);
-
-    switch (card.card_type) {
-      case "attack":
-        setEnemyHp(result.enemyHp);
-        recordDamage(effectivePower);
-        addFloatingNumber(effectivePower, "#e05050", "-");
-        setEnemyShake(true);
-        setTimeout(() => setEnemyShake(false), 500);
-        break;
-      case "heal":
-        setPlayerHp(result.playerHp);
-        addFloatingNumber(effectivePower, "#4caf50", "+");
-        recordDamage(0);
-        break;
-      case "shield":
-        addShield(result.shieldDelta);
-        addFloatingNumber(result.shieldDelta, "#6080d0", "🛡");
-        recordDamage(0);
-        break;
+    addFloatingNumber(card.card_power, cardTypeTheme[card.card_type].floatColor);
+    if (card.card_type === "attack") {
+      setEnemyShake(true);
+      setTimeout(() => setEnemyShake(false), 500);
     }
 
-    removeCard(card.card_id);
+    // Remove card modal state
     setCardStates((prev) => {
       const m = new Map(prev);
       m.delete(card.card_id);
@@ -199,54 +173,38 @@ export default function BattleScreen() {
     setTurnMessage(null);
 
     try {
-      const enemyDefeated = game.enemy_hp <= 0;
+      const handResp = await fetchHand({ grade: game!.grade });
+
+      // Compute damage before state updates (game is a stale closure after endTurn)
+      const enemyDefeated = game.enemyHP <= 0;
+      const absorbed = Math.min(game.shield, game.enemyDamage);
+      const damageTaken = enemyDefeated ? 0 : game.enemyDamage - absorbed;
+
+      endTurn(handResp.hand);
 
       if (enemyDefeated) {
-        const newFloor = game.floor + 1;
-        const newEnemyHp = enemyHpForFloor(newFloor);
-        advanceFloor(newEnemyHp, newEnemyHp, newFloor);
-
-        setTurnMessage("Enemy defeated! A new enemy appears.");
-        setTurnMessageKey((k) => k + 1);
-        setTimeout(() => setTurnMessage(null), 4000);
+        setTurnMessage("Fienden besegrad! En ny fiende dyker upp.");
       } else {
-        const { newPlayerHp, rawDamage, absorbed, actualDamage } = resolveEnemyAttack(
-          game.enemy_next_damage,
-          game.shield,
-          game.player_hp,
-        );
-
-        setPlayerHp(newPlayerHp);
-        setPlayerFlash(true);
-        setTimeout(() => setPlayerFlash(false), 600);
-
-        setTurnMessage(
-          absorbed > 0
-            ? `Enemy dealt ${rawDamage} dmg - shield absorbed ${absorbed}! You took ${actualDamage}.`
-            : `Enemy dealt ${actualDamage} damage!`,
-        );
-        setTurnMessageKey((k) => k + 1);
-        setTimeout(() => setTurnMessage(null), 4000);
-
-        if (newPlayerHp <= 0) {
-          setGameover(true);
-          return;
+        if (damageTaken > 0) {
+          setPlayerFlash(true);
+          setTimeout(() => setPlayerFlash(false), 600);
+          setTurnMessage(`Fienden gav ${damageTaken} skada!`);
+        } else {
+          setTurnMessage(`Skölden absorberade all skada.`);
         }
       }
 
-      const handResp = await fetchHand({
-        grade: game.grade,
-      });
-      beginTurn(handResp.hand);
+      setTurnMessageKey((k) => k + 1);
+      setTimeout(() => setTurnMessage(null), 4000);
       setCardStates(new Map());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to end turn.");
+      setError(e instanceof Error ? e.message : "Kunde inte avsluta rundan.");
     } finally {
       setEndingTurn(false);
     }
   }
 
-  const energyPips = Array.from({ length: game.max_energy }, (_, i) => i < game.energy);
+  const energyPips = Array.from({ length: game.maxEnergy }, (_, i) => i < game.energy);
 
   return (
     <div
@@ -257,7 +215,7 @@ export default function BattleScreen() {
       <div className="flex items-start justify-between mb-4">
         <div className="flex flex-col gap-2">
           <div data-tutorial="player-hp">
-            <PlayerHPBar hp={game.player_hp} maxHp={game.player_max_hp} flash={playerFlash} />
+            <PlayerDisplay hp={game.playerHP} maxHp={game.playerMaxHP} flash={playerFlash} />
           </div>
 
           {game.shield > 0 && (
@@ -273,7 +231,7 @@ export default function BattleScreen() {
               }}
             >
               🛡 <span style={{ fontSize: "1.2rem" }}>{game.shield}</span>
-              <span style={{ fontSize: "0.6rem", color: "#6080d0" }}>SHIELD</span>
+              <span style={{ fontSize: "0.6rem", color: "#6080d0" }}>SKÖLD</span>
             </div>
           )}
         </div>
@@ -291,8 +249,8 @@ export default function BattleScreen() {
             }}
           >
             <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
-            <div>Floor {game.floor}</div>
-            <div>Turn {game.turn}</div>
+            <div>Våning {game.floor}</div>
+            <div>Runda {game.turn}</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -310,7 +268,7 @@ export default function BattleScreen() {
                 cursor: "pointer",
               }}
             >
-              Profile
+              Profil
             </button>
             <button
               onClick={() => setShowMenu(true)}
@@ -336,10 +294,10 @@ export default function BattleScreen() {
       <div className="relative flex flex-1 items-center justify-center">
         <div data-tutorial="enemy">
           <EnemyDisplay
-            hp={game.enemy_hp}
-            maxHp={game.enemy_max_hp}
+            hp={game.enemyHP}
+            maxHP={game.enemyMaxHP}
             shake={enemyShake}
-            nextDamage={game.enemy_next_damage}
+            nextDamage={game.enemyDamage}
           />
         </div>
 
@@ -349,7 +307,6 @@ export default function BattleScreen() {
             className="pointer-events-none absolute animate-float-up font-pixel text-xl"
             style={{ left: `${f.x}%`, top: "30%", color: f.color, textShadow: "2px 2px 0 #1d0a1a" }}
           >
-            {f.prefix}
             {f.value}
           </div>
         ))}
@@ -393,11 +350,33 @@ export default function BattleScreen() {
         </div>
       )}
 
-      {/* End turn + energy row */}
-      <div className="mb-3 flex items-center justify-between gap-4">
+      {/* Feedback row */}
+      {!surveySubmitted && (
+        <div className="mb-2 flex justify-end">
+          <button
+            onClick={() => setShowSurvey(true)}
+            className="font-pixel"
+            style={{
+              fontSize: "0.65rem",
+              background: "var(--px-panel)",
+              border: "2px solid var(--px-panel-border)",
+              boxShadow: "3px 3px 0 #1d0a1a",
+              color: "var(--px-text-dim)",
+              padding: "5px 10px",
+              letterSpacing: "0.06em",
+              cursor: "pointer",
+            }}
+          >
+            Återkoppling
+          </button>
+        </div>
+      )}
+
+      {/* Energy + end turn row */}
+      <div className="mb-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
-            ENERGY
+          <span className="font-pixel text-m" style={{ color: "var(--px-text-dim)" }}>
+            ENERGI
           </span>
           <div className="flex gap-2">
             {energyPips.map((filled, i) => (
@@ -413,39 +392,18 @@ export default function BattleScreen() {
               />
             ))}
           </div>
-          <span className="font-pixel text-sm" style={{ color: "var(--px-gold)" }}>
-            {game.energy}/{game.max_energy}
+          <span className="font-pixel text-m" style={{ color: "var(--px-gold)" }}>
+            {game.energy}/{game.maxEnergy}
           </span>
         </div>
-
-        <div className="flex flex-col items-end gap-2">
-          {!surveySubmitted && (
-            <button
-              onClick={() => setShowSurvey(true)}
-              className="font-pixel"
-              style={{
-                fontSize: "0.65rem",
-                background: "var(--px-panel)",
-                border: "2px solid var(--px-panel-border)",
-                boxShadow: "3px 3px 0 #1d0a1a",
-                color: "var(--px-text-dim)",
-                padding: "5px 10px",
-                letterSpacing: "0.06em",
-                cursor: "pointer",
-              }}
-            >
-              Feedback
-            </button>
-          )}
-          <button
-            data-tutorial="end-turn"
-            onClick={handleEndTurn}
-            disabled={endingTurn}
-            className="px-btn px-6 py-3 text-sm"
-          >
-            {endingTurn ? "…" : "End Turn ↩"}
-          </button>
-        </div>
+        <button
+          data-tutorial="end-turn"
+          onClick={handleEndTurn}
+          disabled={endingTurn}
+          className="px-btn px-6 py-3 text-sm"
+        >
+          {endingTurn ? "..." : "Avsluta runda"}
+        </button>
       </div>
 
       {/* Hand area */}
@@ -461,18 +419,17 @@ export default function BattleScreen() {
         <CardHand
           hand={game.hand}
           onClickCard={(card) => {
-            if (!endingTurn) setSelectedCard(card);
+            if (!endingTurn && game.enemyHP > 0) setSelectedCard(card);
           }}
           playingCardId={playingCardId}
-          energy={game.energy}
+          energy={game.enemyHP > 0 ? game.energy : 0}
         />
       </div>
 
       {selectedCard && (
-        <TaskModal
+        <CardModal
           card={selectedCard}
           savedState={cardStates.get(selectedCard.card_id)}
-          wrongAttempts={getWrongAttempts(selectedCard.card_id)}
           onPlayCard={handlePlayCard}
           onClose={(state) => {
             setCardStates((prev) => new Map(prev).set(selectedCard.card_id, state));
@@ -489,13 +446,6 @@ export default function BattleScreen() {
         <SurveyModal
           onClose={() => setShowSurvey(false)}
           onSubmit={() => setSurveySubmitted(true)}
-          perfContext={{
-            grade: game.grade,
-            floor: game.floor,
-            turn: game.turn,
-            cards_played: game.cards_played,
-            help_requests: game.help_requests,
-          }}
         />
       )}
 

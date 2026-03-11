@@ -55,8 +55,7 @@ export function onAuthStateChanged(callback: (user: User | null) => void): () =>
 
 /**
  * Ensures the user is signed in. If already signed in (anonymously or with
- * Google), does nothing. Otherwise signs in anonymously so we always have a
- * stable UID for survey correlation and user model tracking.
+ * Google), does nothing. Otherwise signs in anonymously.
  */
 export async function ensureSignedIn(): Promise<User> {
   // Wait for the first auth state event, which signals Firebase has finished
@@ -73,22 +72,12 @@ export async function ensureSignedIn(): Promise<User> {
   return result.user;
 }
 
-export type SurveyAnswers = Record<string, number>;
+export type SurveyAnswers = Record<string, number | string>;
 
 export type SurveyPayload = {
-  answers: SurveyAnswers;
+  uid: string;
   schema_version: number;
-
-  // Performance context
-  grade: string;
-  floor: number;
-  turn: number;
-  cards_played: number;
-  help_requests: number;
-
-  // Auth context
-  uid: string | null;
-  is_anonymous: boolean;
+  answers: SurveyAnswers;
 };
 
 export async function submitSurvey(payload: SurveyPayload): Promise<void> {
