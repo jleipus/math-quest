@@ -174,7 +174,7 @@ export default function Card({ card, onClick, playing, affordable, energyCost }:
         }}
       >
         <span className="font-pixel" style={{ fontSize: "0.5rem", color: "var(--px-text-dim)" }}>
-          PWR
+          STY
         </span>
         <span
           className="font-pixel flex items-center justify-center"

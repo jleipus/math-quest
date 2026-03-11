@@ -34,14 +34,14 @@ export default function GameOverScreen() {
             textShadow: "3px 3px 0 #700000, 5px 5px 0 #1d0a1a",
           }}
         >
-          Game Over
+          Spelet slut
         </h1>
 
         <p
           className="font-pixel text-center text-xs leading-loose"
           style={{ color: "var(--px-text-dim)" }}
         >
-          You have been defeated!
+          Du har blivit besegrad!
         </p>
 
         <div className="w-full">
@@ -49,7 +49,7 @@ export default function GameOverScreen() {
         </div>
 
         <button onClick={handleTryAgain} className="px-btn w-full py-4 text-sm">
-          ↩ Try Again
+          Försök igen
         </button>
       </div>
     </div>

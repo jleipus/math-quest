@@ -14,32 +14,32 @@ type Step = {
 const STEPS: Step[] = [
   {
     selector: "[data-tutorial='player-hp']",
-    title: "Your HP",
-    body: "This is your health bar. If it reaches zero, the game is over. Restore health using heal cards.",
+    title: "Dina HP",
+    body: "Det här är din hälsobar. Om den når noll är spelet slut. Återställ hälsa med helakort.",
     side: "bottom",
   },
   {
     selector: "[data-tutorial='enemy']",
-    title: "Enemy",
-    body: "Defeat the enemy by reducing its HP to zero with attack cards. The number above shows how much damage it will deal to you at the end of the turn.",
+    title: "Fiende",
+    body: "Besegra fienden genom att reducera dess HP till noll med attackkort. Siffran ovanför visar hur mycket skada den kommer att ge dig i slutet av rundan.",
     side: "bottom",
   },
   {
     selector: "[data-tutorial='profile-btn']",
-    title: "Your Profile",
-    body: "Tracks your performance across topics and difficulties. The game uses this to tailor the cards it gives you.",
+    title: "Din profil",
+    body: "Spårar dina prestationer inom olika ämnen och svårighetsgrader. Spelet använder detta för att anpassa korten du får.",
     side: "left",
   },
   {
     selector: "[data-tutorial='hand']",
-    title: "Your Cards",
-    body: "Each card has a math task. Click a card to open it, solve the task, then play the card. Cards cost energy, shown by the pips above. Wrong answers reduce the card's power.",
+    title: "Dina kort",
+    body: "Varje kort har en matematikuppgift. Klicka på ett kort för att öppna det, lös uppgiften och spela sedan kortet. Kort kostar energi, visas av prickarna ovan. Felaktiga svar minskar kortets styrka.",
     side: "top",
   },
   {
     selector: "[data-tutorial='end-turn']",
-    title: "End Turn",
-    body: "When you're done playing cards, press End Turn. The enemy attacks, your energy refills, and you get a new hand.",
+    title: "Avsluta runda",
+    body: "När du är klar med att spela kort, tryck på Avsluta runda. Fienden attackerar, din energi fylls på och du får en ny hand.",
     side: "top",
   },
 ];
@@ -283,14 +283,14 @@ export default function TutorialOverlay({ onDone }: { onDone: () => void }) {
               padding: 0,
             }}
           >
-            Skip tutorial
+            Hoppa över
           </button>
           <button
             onClick={next}
             className="px-btn font-pixel"
             style={{ fontSize: "0.75rem", padding: "8px 20px" }}
           >
-            {step < STEPS.length - 1 ? "Next →" : "Got it!"}
+            {step < STEPS.length - 1 ? "Nästa >" : "Förstått!"}
           </button>
         </div>
       </div>

@@ -22,19 +22,19 @@ export default function UserProfile({ showReset = false, actions }: Props) {
     ensureSignedIn()
       .then(() => fetchUserModel())
       .then((data) => setTopics(data.topics))
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load."))
+      .catch((e) => setError(e instanceof Error ? e.message : "Kunde inte ladda."))
       .finally(() => setLoading(false));
   }, []);
 
   async function handleReset() {
-    if (!confirm("Reset your progress? This cannot be undone.")) return;
+    if (!confirm("Återställa dina framsteg? Detta kan inte ångras.")) return;
     setResetting(true);
     setError(null);
     try {
       await resetUserModel();
       setTopics([]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reset failed.");
+      setError(e instanceof Error ? e.message : "Återställning misslyckades.");
     } finally {
       setResetting(false);
     }
@@ -48,7 +48,7 @@ export default function UserProfile({ showReset = false, actions }: Props) {
           className="font-pixel"
           style={{ fontSize: "0.85rem", color: "var(--px-gold)", letterSpacing: "0.08em" }}
         >
-          STUDENT PROFILE
+          ELEVPROFIL
         </span>
         <div className="flex gap-2">
           {showReset && (
@@ -66,7 +66,7 @@ export default function UserProfile({ showReset = false, actions }: Props) {
                 cursor: resetting ? "not-allowed" : "pointer",
               }}
             >
-              {resetting ? "…" : "Reset"}
+              {resetting ? "..." : "Återställ"}
             </button>
           )}
           {actions}
@@ -76,7 +76,7 @@ export default function UserProfile({ showReset = false, actions }: Props) {
       {/* Body */}
       {loading && (
         <p className="font-pixel" style={{ fontSize: "0.75rem", color: "var(--px-text-dim)" }}>
-          Loading…
+          Laddar...
         </p>
       )}
 
@@ -88,7 +88,7 @@ export default function UserProfile({ showReset = false, actions }: Props) {
 
       {!loading && !error && topics.length === 0 && (
         <p className="font-pixel" style={{ fontSize: "0.75rem", color: "var(--px-text-dim)" }}>
-          No data yet - answer some tasks first.
+          Ingen data ännu - svara på några uppgifter först.
         </p>
       )}
 
@@ -106,10 +106,10 @@ export default function UserProfile({ showReset = false, actions }: Props) {
               letterSpacing: "0.06em",
             }}
           >
-            <span>TOPIC</span>
-            <span className="text-center">TRIES</span>
-            <span className="text-center">CORRECT</span>
-            <span className="text-center">HINTS</span>
+            <span>ÄMNE</span>
+            <span className="text-center">FÖRSÖK</span>
+            <span className="text-center">RÄTT</span>
+            <span className="text-center">LEDTRÅDAR</span>
           </div>
 
           {topics.map((rec) => {

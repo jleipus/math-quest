@@ -27,7 +27,7 @@ export default function EnemyDisplay({ hp, maxHP: maxHp, shake, nextDamage }: Pr
             lineHeight: 1.8,
           }}
         >
-          ⚠ Incoming: {nextDamage} dmg
+          ! Inkommande: {nextDamage} skada
         </div>
       )}
 

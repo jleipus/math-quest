@@ -33,8 +33,8 @@ type feedbackProps = {
 // TODO: should be global info
 const cardTypeInfo: Record<string, { label: string; color: string }> = {
   attack: { label: "Attack", color: "#e05050" },
-  heal: { label: "Heal", color: "#4caf50" },
-  shield: { label: "Shield", color: "#6080d0" },
+  heal: { label: "Hela", color: "#4caf50" },
+  shield: { label: "Sköld", color: "#6080d0" },
 };
 
 export default function CardModal({ card, savedState, onPlayCard, onClose }: Props) {
@@ -97,7 +97,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
 
     if (correct) {
       setSolved(true);
-      setFeedback({ type: "success", text: "Correct!" });
+      setFeedback({ type: "success", text: "Rätt!" });
     } else {
       const newWrongAttempts = wrongAttempts + 1;
       const newPower = penalisedPower(card.card_power, newWrongAttempts);
@@ -106,7 +106,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
 
       recordWrongAttempt(card.card_id);
       setWrongAttempts(newWrongAttempts);
-      setFeedback({ type: "error", text: `Not quite - try again.${penaltyText}` });
+      setFeedback({ type: "error", text: `Inte riktigt - försök igen.${penaltyText}` });
     }
 
     await recordAnswer({
@@ -139,7 +139,10 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
       });
       setMessages((prev) => [...prev, result.guiding_question]);
     } catch (e) {
-      setFeedback({ type: "error", text: e instanceof Error ? e.message : "Help request failed." });
+      setFeedback({
+        type: "error",
+        text: e instanceof Error ? e.message : "Hjälpbegäran misslyckades.",
+      });
     } finally {
       setHintLoading(false);
     }
@@ -171,7 +174,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
         <div className="mb-6">
           <div className="mb-3 flex items-center gap-4">
             <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
-              TASK - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
+              UPPGIFT - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
             </span>
             <span className="font-pixel text-sm" style={{ color: typeInfo.color }}>
               {typeInfo.label} - {currentPower} pts
@@ -189,7 +192,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
               }}
               aria-label="Close"
             >
-              {solved ? "▶ Play Card" : "✕"}
+              {solved ? "> Spela kort" : "X"}
             </button>
           </div>
           <h2
@@ -217,7 +220,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSubmitAnswer();
               }}
-              placeholder="Your answer…"
+              placeholder="Ditt svar..."
               disabled={solved}
               className="font-pixel flex-1 px-5 py-4 text-lg"
               style={{
@@ -234,7 +237,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
                 disabled={submitting || !answer.trim()}
                 className="px-btn px-8 py-4 text-base"
               >
-                {submitting ? "…" : "Submit"}
+                {submitting ? "..." : "Skicka"}
               </button>
             )}
           </div>
@@ -269,7 +272,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
               className="font-pixel mb-3 text-sm"
               style={{ color: "var(--px-text-dim)", flexShrink: 0 }}
             >
-              ✏️ Work it out here
+              ✏️ Räkna ut det här
             </p>
             <div style={{ border: "2px solid var(--px-panel-border)", flex: 1, minHeight: 0 }}>
               <DrawingCanvas ref={canvasRef} initialStrokes={savedState?.strokes} />
@@ -301,7 +304,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
                 flexShrink: 0,
               }}
             >
-              🤔 Ask for a hint
+              🤔 Be om en ledtråd
             </button>
 
             <HintDisplay messages={messages} loading={hintLoading} />

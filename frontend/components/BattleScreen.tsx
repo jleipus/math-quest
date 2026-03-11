@@ -140,7 +140,7 @@ export default function BattleScreen() {
 
     if (!canPlayCard(game.energy, card)) {
       setError(
-        `Not enough energy! This card costs ${card.energy_cost} energy (you have ${game!.energy}).`,
+        `Inte tillräckligt med energi! Det här kortet kostar ${card.energy_cost} energi (du har ${game!.energy}).`,
       );
       return;
     }
@@ -183,14 +183,14 @@ export default function BattleScreen() {
       endTurn(handResp.hand);
 
       if (enemyDefeated) {
-        setTurnMessage("Enemy defeated! A new enemy appears.");
+        setTurnMessage("Fienden besegrad! En ny fiende dyker upp.");
       } else {
         if (damageTaken > 0) {
           setPlayerFlash(true);
           setTimeout(() => setPlayerFlash(false), 600);
-          setTurnMessage(`Enemy dealt ${damageTaken} damage!`);
+          setTurnMessage(`Fienden gav ${damageTaken} skada!`);
         } else {
-          setTurnMessage(`Shield absorbed all damage.`);
+          setTurnMessage(`Skölden absorberade all skada.`);
         }
       }
 
@@ -198,7 +198,7 @@ export default function BattleScreen() {
       setTimeout(() => setTurnMessage(null), 4000);
       setCardStates(new Map());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to end turn.");
+      setError(e instanceof Error ? e.message : "Kunde inte avsluta rundan.");
     } finally {
       setEndingTurn(false);
     }
@@ -231,7 +231,7 @@ export default function BattleScreen() {
               }}
             >
               🛡 <span style={{ fontSize: "1.2rem" }}>{game.shield}</span>
-              <span style={{ fontSize: "0.6rem", color: "#6080d0" }}>SHIELD</span>
+              <span style={{ fontSize: "0.6rem", color: "#6080d0" }}>SKÖLD</span>
             </div>
           )}
         </div>
@@ -249,8 +249,8 @@ export default function BattleScreen() {
             }}
           >
             <div style={{ color: "var(--px-text)" }}>{game.grade}</div>
-            <div>Floor {game.floor}</div>
-            <div>Turn {game.turn}</div>
+            <div>Våning {game.floor}</div>
+            <div>Runda {game.turn}</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -268,7 +268,7 @@ export default function BattleScreen() {
                 cursor: "pointer",
               }}
             >
-              Profile
+              Profil
             </button>
             <button
               onClick={() => setShowMenu(true)}
@@ -367,7 +367,7 @@ export default function BattleScreen() {
               cursor: "pointer",
             }}
           >
-            Feedback
+            Återkoppling
           </button>
         </div>
       )}
@@ -376,7 +376,7 @@ export default function BattleScreen() {
       <div className="mb-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="font-pixel text-m" style={{ color: "var(--px-text-dim)" }}>
-            ENERGY
+            ENERGI
           </span>
           <div className="flex gap-2">
             {energyPips.map((filled, i) => (
@@ -402,7 +402,7 @@ export default function BattleScreen() {
           disabled={endingTurn}
           className="px-btn px-6 py-3 text-sm"
         >
-          {endingTurn ? "…" : "End Turn ↩"}
+          {endingTurn ? "..." : "Avsluta runda"}
         </button>
       </div>
 

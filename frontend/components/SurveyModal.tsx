@@ -6,18 +6,18 @@ import { ensureSignedIn, submitSurvey, type SurveyAnswers } from "../lib/firebas
 const SURVEY_SCHEMA_VERSION = 2;
 
 const QUESTIONS: { id: number; text: string }[] = [
-  { id: 1, text: "How would you rate your math skill level?" },
-  { id: 2, text: "How difficult do you find the math tasks?" },
-  { id: 3, text: "How helpful are the hints when you use them?" },
-  { id: 4, text: "How likely are you to play this in your spare time?" },
-  { id: 5, text: "How stressed do you feel playing the game?" },
+  { id: 1, text: "Hur bedömer du din matematikförmåga?" },
+  { id: 2, text: "Hur svåra tycker du att matematikuppgifterna är?" },
+  { id: 3, text: "Hur hjälpsamma är ledtrådarna när du använder dem?" },
+  { id: 4, text: "Hur troligt är det att du spelar det här på fritiden?" },
+  { id: 5, text: "Hur stressad känner du dig när du spelar?" },
 ];
 
 const GENDER_OPTIONS = [
-  { value: "male", label: "Male" },
-  { value: "female", label: "Female" },
-  { value: "other", label: "Other" },
-  { value: "prefer_not_to_say", label: "Prefer not to say" },
+  { value: "male", label: "Man" },
+  { value: "female", label: "Kvinna" },
+  { value: "other", label: "Annat" },
+  { value: "prefer_not_to_say", label: "Vill ej uppge" },
 ];
 
 type Props = {
@@ -60,7 +60,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
       onSubmit?.();
       setTimeout(onClose, 1800);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to submit. Please try again.");
+      setError(e instanceof Error ? e.message : "Kunde inte skicka. Försök igen.");
     } finally {
       setSubmitting(false);
     }
@@ -90,7 +90,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
             className="font-pixel"
             style={{ fontSize: "0.85rem", color: "var(--px-gold)", letterSpacing: "0.08em" }}
           >
-            FEEDBACK SURVEY
+            ÅTERKOPPLINGSENKÄT
           </span>
           <button
             onClick={onClose}
@@ -113,7 +113,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
             className="font-pixel text-center"
             style={{ fontSize: "0.8rem", color: "#4caf50", padding: "24px 0" }}
           >
-            Thanks for your feedback!
+            Tack för din återkoppling!
           </p>
         ) : (
           <>
@@ -121,7 +121,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
               className="font-pixel mb-6"
               style={{ fontSize: "0.7rem", color: "var(--px-text-dim)", lineHeight: 1.7 }}
             >
-              Rate each question from 1 to 5.
+              Betygsätt varje fråga från 1 till 5.
             </p>
 
             <div className="flex flex-col gap-6">
@@ -167,7 +167,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
                   className="font-pixel mb-3"
                   style={{ fontSize: "0.72rem", color: "var(--px-text)", lineHeight: 1.6 }}
                 >
-                  What is your gender?
+                  Vilket kön har du?
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {GENDER_OPTIONS.map(({ value, label }) => {
@@ -201,7 +201,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
                   className="font-pixel mb-3"
                   style={{ fontSize: "0.72rem", color: "var(--px-text)", lineHeight: 1.6 }}
                 >
-                  What is your age?
+                  Hur gammal är du?
                 </p>
                 <input
                   type="number"
@@ -237,7 +237,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
                 {QUESTIONS.filter((q) => answers[q.id] !== undefined).length +
                   (answers["gender"] !== undefined ? 1 : 0) +
                   (answers["age"] !== undefined && String(answers["age"]).trim() !== "" ? 1 : 0)}
-                /{QUESTIONS.length + 2} answered
+                /{QUESTIONS.length + 2} besvarade
               </span>
               <button
                 onClick={handleSubmit}
@@ -250,7 +250,7 @@ export default function SurveyModal({ onClose, onSubmit }: Props) {
                   cursor: !allAnswered || submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "…" : "Submit"}
+                {submitting ? "..." : "Skicka"}
               </button>
             </div>
           </>
