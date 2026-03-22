@@ -9,7 +9,7 @@ import type {
   UserModelResponse,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = `${process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000"}/api/v1`;
 
 export async function fetchHand(payload: FetchHandRequest): Promise<FetchHandResponse> {
   return post<FetchHandResponse>("/game/hand", payload);

@@ -57,10 +57,8 @@ jobs:
           docker push $REGISTRY/mathquest-backend:$VERSION
           docker push $REGISTRY/mathquest-backend:latest
 
-          BACKEND_URL=$(gcloud run services describe mathquest-backend \
-            --region ${{ env.REGION }} --format 'value(status.url)' 2>/dev/null || echo "")
           docker build \
-            --build-arg "NEXT_PUBLIC_API_URL=${BACKEND_URL}/api/v1" \
+            --build-arg "NEXT_PUBLIC_BACKEND_URL=${{ secrets.BACKEND_URL }}" \
             --build-arg "NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" \
             --build-arg "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}" \
             --build-arg "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" \
