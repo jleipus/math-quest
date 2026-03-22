@@ -32,21 +32,22 @@
             \node[action, below=of present] (attempt) {Student Submits Answer};
             \node[decision, below=3cm of attempt] (correct) {Correct?};
 
-            % Right path: Correct
-            \node[action, right=1.4cm of correct] (unlock) {Unlock Card};
-            \node[action, below=of unlock] (play) {Play Card in Combat};
-            \node[decision, below=of play] (won) {Enemy\\Defeated?};
-            \node[output, left=of won] (advance) {Advance to\\Next Stage};
-
-            % Left path: Incorrect
-            \node[action, left=1.4cm of correct] (damage) {Take Damage};
-            \node[decision, below=of damage] (alive) {Still\\Alive?};
-            \node[output, right=of alive] (gameover) {Game Over};
-
             % Help path
             \node[action, left=of attempt] (askhelp) {Request Help\\from Agent};
             \node[action, below=of askhelp] (guide) {Receive Guiding\\Question};
 
+            % Incorrect
+            \node[action, right=1.7cm of correct] (penalty) {Reduce Card\\Effect};
+
+            % Correct
+            \node[action, left=1.7cm of correct] (unlock) {Unlock Card};
+            \node[action, below=of unlock] (play) {Play Card in Combat};
+            \node[decision, below=of play] (repeat) {Play Another\\Card?};
+
+            % End turn
+            \node[action, right=of repeat] (damage) {Enemy Deals Damage};
+            \node[decision, right=of damage] (alive) {Still Alive?};
+            \node[output, above=of alive] (gameover) {Game Over};
 
             % Arrows
 
@@ -55,27 +56,26 @@
             \draw[->] (present) -- (attempt);
             \draw[->] (attempt) -- (correct);
 
-            % Correct path
-            \draw[->] (correct) -- node[label, above] {Yes} (unlock);
-            \draw[->] (unlock) -- (play);
-            \draw[->] (play) -- (won);
-            \draw[->] (won) -- node[label, above] {Yes} (advance);
-
-            % Incorrect path
-            \draw[->] (correct) -- node[label, above] {No} (damage);
-            \draw[->] (damage) -- (alive);
-            \draw[->] (alive) -- node[label, above] {No} (gameover);
-
-            % Loop back: enemy not defeated
-            \draw[->] (won.south) -- ++(0,-0.5) -| node[label, near start, right] {No} ([xshift=5.2cm]present.east) -- (present.east);
-
-            % Loop back: still alive, retry
-            \draw[->] (alive.south) -- ++(0,-0.5) -| node[label, near start, left] {Yes} ([xshift=-5.4cm]present.west) -- (present.west);
-
             % Help path
             \draw[->] (attempt) -- node[label, above] {Stuck} (askhelp);
             \draw[->] (askhelp) -- (guide);
             \draw[->] (guide.south) -- ++(0,-0.5) -| ([xshift=-0.5cm]attempt.south);
+
+            % Incorrect path
+            \draw[->] (correct) -- node[label, above] {No} (penalty);
+            \draw[->] (penalty.east) -- ++(0.5,0) -| ([xshift=5.2cm]attempt.east) -- (attempt.east);
+
+            % Correct path
+            \draw[->] (correct) -- node[label, above] {Yes} (unlock);
+            \draw[->] (unlock) -- (play);
+            \draw[->] (play) -- (repeat);
+            \draw[->] (repeat.west) -- ++(-0.5,0) -| node[pos=0.1, below] {Yes} ([xshift=-5.2cm]present.west) -- (present.west);
+
+            % End turn
+            \draw[->] (repeat) -- node[label, above] {No} (damage);
+            \draw[->] (damage) -- (alive);
+            \draw[->] (alive) -- node[label, left] {No} (gameover);
+            \draw[->] (alive.east) -- ++(0.5,0) -| node[pos=0.1, below] {Yes} ([xshift=5.6cm]present.east) -- (present.east);
 
         \end{tikzpicture}
     }
