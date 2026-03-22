@@ -62,19 +62,17 @@ The evaluation adopts an exploratory, qualitative approach. It consists of two s
 
 The first session involves a teacher acting as the domain expert during which we focus on evaluating the RAG system's generation layer: whether the guiding questions produced by the \enquote{MiniGuide} strategy are pedagogically sound, and question content and difficulty is appropriate for the target grade. The teacher interacts with the system and provides feedback on the state of the prototype.
 
-During the second session, the system is distributes to an undetermined number of school students aged 10--12 (2-3 classrooms, upward of 20 students). This session focuses on usability and engagement rather than learning outcomes, as a single session is insufficient to measure knowledge gains. Students are presented with a simple questionnaire to capture the students disposition towards the system. The questionnaire is built into the system (Figure~\ref{fig:questionnaire_screen}) consists of the following questions:
+During the second session, the system is distributes to an undetermined number of school students aged 10--12 (2-3 classrooms, upward of 20 students). This session focuses on usability and engagement rather than learning outcomes, as a single session is insufficient to measure knowledge gains. Students are presented with a simple questionnaire to capture the students disposition towards the system. The questionnaire is built into the system (Figure~\ref{fig:questionnaire_screen}) and consists of the following questions:
 
 \begin{itemize}
-    \item TODO;
+    \item Age
+    \item Gender (Male, Female, Other, Prefer not to say)
+    \item \textbf{Q1:} How would you rate your math skill level? (1--5)\\\enquote{Hur bedömer du din matematikförmåga?} 
+    \item \textbf{Q2:} How difficult do you find the math tasks? (1--5)\\\enquote{Hur svåra tycker du att matematikuppgifterna är?} 
+    \item \textbf{Q3:} How helpful are the hints when you use them?\\\enquote{Hur hjälpsamma är ledtrådarna när du använder dem?} 
+    \item \textbf{Q4:} How likely are you to play this in your spare time? (1--5)\\\enquote{Hur troligt är det att du spelar det här på fritiden?} 
+    \item \textbf{Q5:} How stressed do you feel while playing? (1--5)\\\enquote{Hur stressad känner du dig när du spelar?} 
 \end{itemize}
-
-% const QUESTIONS: { id: number; text: string }[] = [
-%   { id: 1, text: "Hur bedömer du din matematikförmåga?" },
-%   { id: 2, text: "Hur svåra tycker du att matematikuppgifterna är?" },
-%   { id: 3, text: "Hur hjälpsamma är ledtrådarna när du använder dem?" },
-%   { id: 4, text: "Hur troligt är det att du spelar det här på fritiden?" },
-%   { id: 5, text: "Hur stressad känner du dig när du spelar?" },
-% ];
 
 \begin{figure}[ht]
     \centering

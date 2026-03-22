@@ -5,7 +5,6 @@ Group project for the Responsible Design of Interactive AI Systems course at Ume
 ## TODO
 
 - Update game screen screenshot
-- Fill in questionnaire questions
 - Add questionnaire screenshot
 - Expand results
 - Include start screen screenshot
