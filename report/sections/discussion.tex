@@ -2,6 +2,10 @@
 
 % Briefly discuss your choices of methodology, (technical) solutions other results.
 
+The participatory design methodology provided a useful structure for prototyping while remaining inline with pedagogical needs, but its application was constrained by the short timeline and limited stakeholder access. In practice, the iterative cycle of co-design, prototyping, and reflection was reduced to a single round of teacher feedback followed by a student demo session, rather than the multiple iterations the methodology calls for. 
+
+The interaction log data serves as the primary basis for analysis, as the low survey response rate prevents drawing meaningful conclusions from the questionnaire alone. In hindsight, the survey should have been incentivized —- for example, by integrating it as a required step before a final game round or by offering an in-game reward for completion.
+
 \subsection{Addressing the Research Questions}
 
 \textbf{RQ1: How can a dynamic user model approximate a student's ZPD and deliver guidance that promotes active reasoning?}
@@ -30,10 +34,14 @@ The evaluation does not address what happens when a student answers incorrectly 
 
 \textbf{RQ3: How can the MiniGuide strategy ensure that AI responses provide guidance rather than direct answers?}
 
-Evaluation with the teacher confirmed that the guidance prompt responses were pedagogically sound and avoided leaking answers, but further evaluation and additional survey responses are required to more accurately gauge the systems success at addresing this question.
+Evaluation with the teacher confirmed that the guidance prompt responses were pedagogically sound and avoided leaking answers, but further evaluation and additional survey responses are required to more accurately gauge the system's success at addressing this question.
 
 \subsection{Limitations}
 
 The evaluation is limited in scope. Two sessions is insufficient for measuring learning outcomes, long-term engagement, or the effectiveness of the adaptive difficulty system. This would require longitudinal studies with larger and more diverse participant groups, including students across different ability levels.
 
 The current prototype does not implement content guardrails to filter potentially inappropriate LLM output before it reaches the student. While no issues were observed during testing, this is a necessary safeguard before any unsupervised use with children. This would need to be addressed in future iterations.
+
+\subsection{Self-Categorization Theory}
+
+Another theory that was considered when building the theoretical grounding for the project was Self-Categorization Theory (SCT), which describes how individuals classify themselves and others into social groups, and how these categorizations influence behavior and self-perception. In an educational context, this is relevant because students often categorize themselves as "good at math" or "bad at math," which can affect their willingness to engage with challenging material. The current system does not account for these self-categorizations -- it adapts to observable performance rather than the student's identity or group-based beliefs about their ability. Investigating how the system interacts with these identity dynamics would be a valuable direction for future work.
