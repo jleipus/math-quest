@@ -40,6 +40,7 @@ export async function signInWithGoogle(): Promise<User> {
 }
 
 export async function signOut(): Promise<void> {
+  _signInPromise = null;
   await _signOut(auth);
 }
 
@@ -53,23 +54,29 @@ export function onAuthStateChanged(callback: (user: User | null) => void): () =>
   return _onAuthStateChanged(auth, callback);
 }
 
+let _signInPromise: Promise<User> | null = null;
+
 /**
  * Ensures the user is signed in. If already signed in (anonymously or with
  * Google), does nothing. Otherwise signs in anonymously.
  */
 export async function ensureSignedIn(): Promise<User> {
-  // Wait for the first auth state event, which signals Firebase has finished
-  // restoring the persisted session from IndexedDB/localStorage.
-  const resolvedUser = await new Promise<User | null>((resolve) => {
-    const unsub = _onAuthStateChanged(auth, (user) => {
-      unsub();
-      resolve(user);
+  if (_signInPromise) return _signInPromise;
+  _signInPromise = (async () => {
+    // Wait for the first auth state event, which signals Firebase has finished
+    // restoring the persisted session from IndexedDB/localStorage.
+    const resolvedUser = await new Promise<User | null>((resolve) => {
+      const unsub = _onAuthStateChanged(auth, (user) => {
+        unsub();
+        resolve(user);
+      });
     });
-  });
 
-  if (resolvedUser) return resolvedUser;
-  const result = await _signInAnonymously(auth);
-  return result.user;
+    if (resolvedUser) return resolvedUser;
+    const result = await _signInAnonymously(auth);
+    return result.user;
+  })();
+  return _signInPromise;
 }
 
 export type SurveyAnswers = Record<string, number | string>;

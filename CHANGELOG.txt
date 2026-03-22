@@ -1,3 +1,7 @@
+0.2.3
+
+- Fix multiple anonymous login creation bug
+
 0.2.2
 
 - Translate to Swedish
