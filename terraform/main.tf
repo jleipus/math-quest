@@ -17,6 +17,7 @@ provider "google" {
   region  = var.region
 }
 
+
 resource "google_cloud_run_v2_service" "backend" {
   name     = "mathquest-backend"
   location = var.region
@@ -25,7 +26,7 @@ resource "google_cloud_run_v2_service" "backend" {
 
   template {
     scaling {
-      min_instance_count = 1
+      min_instance_count = 0
       max_instance_count = 1
     }
 
@@ -54,6 +55,14 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "DAIS_GEMINI_API_KEY"
         value = var.gemini_api_key
       }
+      env {
+        name  = "DAIS_FIREBASE_SERVICE_ACCOUNT_JSON"
+        value = var.firebase_service_account_json
+      }
+      env {
+        name  = "DAIS_ALLOWED_ORIGINS"
+        value = var.allowed_origins # e.g. '["https://yourdomain.com"]' or '["*"]'
+      }
     }
   }
 }
@@ -66,7 +75,7 @@ resource "google_cloud_run_v2_service" "frontend" {
 
   template {
     scaling {
-      max_instance_count = 3
+      max_instance_count = 1
     }
 
     containers {
@@ -93,4 +102,14 @@ resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
   name     = google_cloud_run_v2_service.frontend.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+output "frontend_url" {
+  description = "Public URL of the frontend Cloud Run service"
+  value       = google_cloud_run_v2_service.frontend.uri
+}
+
+output "backend_url" {
+  description = "Public URL of the backend Cloud Run service"
+  value       = google_cloud_run_v2_service.backend.uri
 }

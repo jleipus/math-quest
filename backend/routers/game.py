@@ -1,119 +1,94 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.config import get_settings
+from backend.models.assistant import HintRequest, HintResponse
 from backend.models.game import (
-    AnswerResponse,
-    AnswerRequest,
-    DrawHandRequest,
-    DrawHandResponse,
-    EndTurnRequest,
-    EndTurnResponse,
-    InitGameRequest,
-    InitGameResponse,
-    PlayCardResponse,
-    PlayCardRequest,
+    FetchHandRequest,
+    FetchHandResponse,
+    RecordAnswerRequest,
+    RecordAnswerResponse,
 )
-from backend.services.game import game_service
-from backend.services.user_model import user_model_service
+from backend.security import limiter, verify_firebase_token
+from backend.services.curriculum import curriculum_service
+from backend.services.firestore_user_model import firestore_user_model_service
+from backend.services.game import generate_hand
+from backend.services.llm import llm_service
+from backend.services.vision import rasterize_strokes_to_png
 
 router = APIRouter(prefix="/game", tags=["game"])
 
 
-@router.post("/init", response_model=InitGameResponse)
-def init_game(payload: InitGameRequest) -> InitGameResponse:
-    data, _ = game_service.init_game(grade=payload.grade)
-    return data
+@router.post(
+    "/hand",
+    response_model=FetchHandResponse,
+)
+@limiter.limit("10/minute")
+def fetch_hand(
+    request: Request,
+    payload: FetchHandRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> FetchHandResponse:
+    try:
+        hand = generate_hand(
+            grade=payload.grade,
+            uid=uid,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    return FetchHandResponse(hand=hand)
 
 
-@router.post("/draw", response_model=DrawHandResponse)
-def draw_hand(payload: DrawHandRequest) -> DrawHandResponse:
-    settings = get_settings()
-    with game_service.get_session_locked(str(payload.session_id)) as session:
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-        try:
-            return game_service.draw_hand(session, hand_size=settings.default_hand_size)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=503, detail=str(exc))
+@router.post(
+    "/answer",
+    response_model=RecordAnswerResponse,
+)
+def record_answer(
+    payload: RecordAnswerRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> RecordAnswerResponse:
+    if uid is not None:
+        firestore_user_model_service.record_attempt(
+            uid=uid,
+            topic=payload.topic,
+            correct=payload.correct,
+            difficulty=payload.difficulty,
+        )
+    return RecordAnswerResponse(ok=True)
 
 
-@router.post("/answer", response_model=AnswerResponse)
-def answer_task(payload: AnswerRequest) -> AnswerResponse:
-    with game_service.get_session_locked(str(payload.session_id)) as session:
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-
-        task_id = str(payload.task_id)
-        card = session.get_card_for_task(task_id)
-        if card is None:
-            raise HTTPException(status_code=404, detail="Task not found in this session")
-
-        expected = session.get_expected_answer(task_id)
-        if expected is None:
-            raise HTTPException(status_code=500, detail="Expected answer missing")
-
-        correct = game_service.check_answer(payload.answer, expected)
-
-    # Record attempt outside the session lock, UserModelService has its own lock
-    user_model_service.record_attempt(
-        session_id=str(payload.session_id),
-        topic=card.task.topic,
-        correct=correct,
-        difficulty=card.task.difficulty,
+@router.post(
+    "/hint",
+    response_model=HintResponse,
+)
+@limiter.limit("20/minute")
+def request_hint(
+    request: Request,
+    payload: HintRequest,
+    uid: str | None = Depends(verify_firebase_token),
+) -> HintResponse:
+    context = curriculum_service.retrieve_context(
+        grade=payload.grade,
+        topic=payload.topic,
+        question=payload.question,
     )
 
-    if correct:
-        return AnswerResponse(correct=True, card_id=card.card_id)
+    image_png: bytes | None = None
+    if payload.student_work:
+        image_png = rasterize_strokes_to_png(payload.student_work, payload.canvas_width, payload.canvas_height)
 
-    return AnswerResponse(correct=False, card_id=card.card_id)
+    profile_context = ""
+    if uid is not None:
+        profile_context = firestore_user_model_service.get_or_create(uid).get_profile_context()
+        firestore_user_model_service.record_hint(
+            uid=uid,
+            topic=payload.topic,
+            difficulty=payload.difficulty,
+        )
 
-
-@router.post("/play_card", response_model=PlayCardResponse)
-def play_card(payload: PlayCardRequest) -> PlayCardResponse:
-    with game_service.get_session_locked(str(payload.session_id)) as session:
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-
-        card_id = str(payload.card_id)
-        card = session.get_card(card_id)
-        if card is None:
-            raise HTTPException(status_code=404, detail="Card not found in this session")
-
-        enemy_hp, player_hp = game_service.apply_card(session, card)
-        session.remove_card(card_id)
-
-        enemy_defeated = session.enemy_hp <= 0
-
-    return PlayCardResponse(
-        enemy_hp=enemy_hp,
-        player_hp=player_hp,
-        effect_value=card.card_power,
-        card_type=card.card_type,
-        enemy_defeated=enemy_defeated,
-    )
-
-
-@router.post("/end_turn", response_model=EndTurnResponse)
-def end_turn(payload: EndTurnRequest) -> EndTurnResponse:
-    settings = get_settings()
-    with game_service.get_session_locked(str(payload.session_id)) as session:
-        if session is None:
-            raise HTTPException(status_code=404, detail="Session not found")
-
-        # If enemy hp <= 0, enemy_attack advances the floor and spawns new enemy
-        player_hp, raw_damage, absorbed = game_service.enemy_attack(session)
-
-        try:
-            draw_resp = game_service.draw_hand(session, hand_size=settings.default_hand_size)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=503, detail=str(exc))
-
-    return EndTurnResponse(
-        player_hp=player_hp,
-        enemy_damage=raw_damage,
-        shield_absorbed=absorbed,
-        hand=draw_resp.hand,
-        enemy_next_damage=draw_resp.enemy_next_damage,
-        enemy_hp=session.enemy_hp,
-        enemy_max_hp=session.enemy_max_hp,
+    return llm_service.generate_guidance(
+        question=payload.question,
+        context=context,
+        image_png=image_png,
+        profile_context=profile_context,
+        previous_hints=payload.previous_hints or None,
+        session_id=uid or "anonymous",
     )

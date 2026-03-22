@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from pydantic import BaseModel
 
 
@@ -19,5 +17,4 @@ class TopicRecord(BaseModel):
 
 
 class UserModelResponse(BaseModel):
-    session_id: UUID
     topics: list[TopicRecord]

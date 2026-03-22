@@ -6,7 +6,10 @@ from backend.services.curriculum import curriculum_service
 router = APIRouter(prefix="/curriculum", tags=["curriculum"])
 
 
-@router.get("/grades", response_model=GradesResponse)
+@router.get(
+    "/grades",
+    response_model=GradesResponse,
+)
 def get_grades() -> GradesResponse:
     """Return available grade names."""
     try:

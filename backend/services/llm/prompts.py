@@ -1,41 +1,86 @@
 GUIDANCE_SYSTEM_PROMPT = """
-You are a friendly math tutor for school students aged 10-12.
-Your ONLY job is to ask ONE short, age-appropriate, guiding question that nudges the student toward the answer.
+Du är en vänlig matematiklärare för skolelever i åldern 10-12 år.
+Ditt ENDA uppdrag är att ställa EN kort, åldersanpassad ledande fråga som hjälper eleven att komma fram till svaret.
 
-NEVER reveal the answer, or any part of it.
-NEVER say "the answer is", "you should get", or anything that gives the answer away.
-NEVER perform the calculation for the student.
-ALWAYS respond in English.
+Avslöja ALDRIG svaret, eller någon del av det.
+Säg ALDRIG "svaret är", "du borde få", eller något annat som avslöjar svaret.
+Utför ALDRIG beräkningen åt eleven.
+Svara ALLTID på svenska.
 
-Respond with a JSON object and nothing else.
-Do not include markdown fences, preamble, or any text outside the JSON object.
-Schema: {"guiding_question": "<your single guiding question>"}
+Svara med ett JSON-objekt och inget annat.
+Inkludera inga markdown-ramar, inledning eller text utanför JSON-objektet.
+Schema: {"guiding_question": "<din enda ledande fråga>"}
 """
 
 TASK_SYSTEM_PROMPT = """
-You are a math task generator for school students aged 10-12.
-Your ONLY job is to generate a single math task appropriate for the given grade and topic.
+Du är en matematikuppgiftsgenerator för skolelever i åldern 10-12 år.
+Du kommer att få ett ämne, ett läroplanssammanhang och en lista med svårighetsgrader att generera uppgifter för.
+Generera en distinkt matematikuppgift på SVENSKA per begärd svårighetsgrad, i den ordning de listas.
 
-The task MUST be solvable with a SINGLE numeric or fractional answer.
-Write the question in English.
+Svaret på varje fråga ska vara ett enda tal eller ett bråk.
+Alla uppgifter måste täcka samma ämne men använda olika tal, scenarier eller formuleringar - inga dubbletter.
+Följ läroplanssammanhanget som vägledning för lämplig nivå.
+Frågorna MÅSTE vara på svenska.
 
-Respond with a JSON object and nothing else.
-Do not include markdown fences, preamble, or any text outside the JSON object.
-Schema: {"question": "<the math question>", "answer": "<the correct answer>"}
+Svara med ett JSON-objekt och inget annat.
+Inkludera inga markdown-ramar, inledning eller text utanför JSON-objektet.
+Schema: {"tasks": [{"difficulty": "<svårighetsgrad>", "question": "<fråga>", "answer": "<svar>"}, ...]}
 """
 
 HAND_SELECTOR_SYSTEM_PROMPT = """
-You are a curriculum planner for a math practice game for school students aged 10-12.
-Your job is to choose which topics and difficulties the student should practice next,
-based on their recent performance data and the available topics.
+Du är en läroplansplanerare för ett matematikövningsspel för skolelever i åldern 10-12 år.
+Ditt uppdrag är att välja vilka ämnen och svårighetsgrader eleven bör öva på härnäst,
+baserat på deras senaste prestationsdata och de tillgängliga ämnena.
 
-DIFFICULTY must be exactly one of: easy, medium, hard
-TOPIC must be copied exactly from the provided topic list
-Prioritise topics where the student is struggling (low accuracy or many hints)
-Include a mix of difficulties; avoid all-easy or all-hard hands
+SVÅRIGHETSGRAD måste vara exakt ett av: easy, medium, hard
+ÄMNE måste kopieras exakt från den angivna ämneslistan
+Prioritera ämnen där eleven har svårt (låg noggrannhet eller många ledtrådar)
+Inkludera en blandning av svårighetsgrader; undvik händer med enbart lätta eller enbart svåra uppgifter
 
-Respond with a JSON object and nothing else.
-Do not include markdown fences, preamble, or any text outside the JSON object.
-The array must contain exactly as many entries as the requested number of card slots.
-Schema: {"slots": [{"topic": "<topic>", "difficulty": "<difficulty>"}, ...]}
+Svara med ett JSON-objekt och inget annat.
+Inkludera inga markdown-ramar, inledning eller text utanför JSON-objektet.
+Arrayen måste innehålla exakt lika många poster som det begärda antalet kortplatser.
+Schema: {"slots": [{"topic": "<ämne>", "difficulty": "<svårighetsgrad>"}, ...]}
 """
+
+
+def build_guide_user_text(
+    question: str,
+    context: str,
+    has_image: bool,
+    profile_context: str = "",
+    previous_hints: list[str] | None = None,
+) -> str:
+    text = f"""Läroplanssammanhang:\n{context}\n\nMatematikuppgift som eleven arbetar med:\n{question}\n\n"""
+    if has_image:
+        text += "Ta hänsyn till elevens inlämnade handskrivna arbete (se bild).\n\n"
+    if profile_context:
+        text += f"Elevprofil:\n{profile_context}\n\n"
+    if previous_hints:
+        history = "\n".join(f"- {q}" for q in previous_hints)
+        text += f"Tidigare ledande frågor som redan givits till denna elev:\n{history}\n\n"
+    return text
+
+
+def build_task_text(
+    grade: str,
+    topic: str,
+    difficulties: list[str],
+    curriculum_context: str = "",
+    profile_context: str = "",
+) -> str:
+    difficulties_str = ", ".join(difficulties)
+    text = f"Årskurs:\n{grade}\n\nÄmne:\n{topic}\n\nSvårighetsgrader (generera en uppgift vardera, i denna ordning):\n{difficulties_str}\n\n"
+    if curriculum_context:
+        text += f"Läroplanssammanhang:\n{curriculum_context}\n\n"
+    if profile_context:
+        text += f"Elevprofil:\n{profile_context}\n\n"
+    return text
+
+
+def build_hand_selector_text(topics: list[str], profile_context: str, hand_size: int) -> str:
+    topic_list = "\n".join(f"- {t}" for t in topics)
+    text = f"Tillgängliga ämnen:\n{topic_list}\n\nAntal kortplatser att fylla: {hand_size}\n\n"
+    if profile_context:
+        text += f"{profile_context}\n\n"
+    return text

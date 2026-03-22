@@ -1,81 +1,23 @@
 "use client";
 
 import Image from "next/image";
-import type {
-  Card as CardType,
-  CardType as CardTypeValue,
-  AttackSubtype,
-  Difficulty,
-} from "../lib/types";
+import type { Card as CardInfo, AttackSubtype, Difficulty } from "../lib/types";
+import { difficultyColor, difficultyMaterial, cardTypeTheme } from "../lib/theme";
 
 type Props = {
-  card: CardType;
-  index: number; // 1-based keyboard shortcut hint
-  onClick: (card: CardType) => void;
+  card: CardInfo;
+  onClick: (card: CardInfo) => void;
   playing: boolean;
   affordable: boolean;
   energyCost: number;
 };
 
-const difficultyColor: Record<Difficulty, string> = {
-  easy: "#4caf50",
-  medium: "#f5c842",
-  hard: "#e05050",
-};
-
-const cardTypeTheme: Record<
-  CardTypeValue,
-  {
-    bg: string;
-    border: string;
-    headerBg: string;
-    label: string;
-    powerBg: string;
-    powerColor: string;
-    glowColor: string;
-  }
-> = {
-  attack: {
-    bg: "#280a0a",
-    border: "#c05030",
-    headerBg: "#4a1010",
-    label: "ATTACK",
-    powerBg: "#c05030",
-    powerColor: "#fff0ee",
-    glowColor: "rgba(200,80,50,0.45)",
-  },
-  heal: {
-    bg: "#0a1f0e",
-    border: "#3a8a50",
-    headerBg: "#0e3518",
-    label: "HEAL",
-    powerBg: "#2a7a40",
-    powerColor: "#e0ffe8",
-    glowColor: "rgba(60,180,80,0.4)",
-  },
-  shield: {
-    bg: "#0a0e28",
-    border: "#4060b0",
-    headerBg: "#101840",
-    label: "SHIELD",
-    powerBg: "#2a4090",
-    powerColor: "#dde8ff",
-    glowColor: "rgba(80,120,220,0.45)",
-  },
-};
-
-const materialByDifficulty: Record<Difficulty, string> = {
-  easy: "wooden",
-  medium: "iron",
-  hard: "gold",
-};
-
 function getCardSprite(
-  cardType: CardTypeValue,
+  cardType: string,
   attackSubtype: AttackSubtype | null,
   difficulty: Difficulty,
 ): string {
-  const material = materialByDifficulty[difficulty];
+  const material = difficultyMaterial[difficulty];
   if (cardType === "heal") return "/assets/items/potion.png";
   if (cardType === "shield") return `/assets/items/shields/${material}_shield.png`;
   // attack
@@ -84,7 +26,7 @@ function getCardSprite(
   return `/assets/items/weapons/${material}_${weapon}.png`;
 }
 
-export default function Card({ card, index, onClick, playing, affordable, energyCost }: Props) {
+export default function Card({ card, onClick, playing, affordable, energyCost }: Props) {
   const theme = cardTypeTheme[card.card_type] ?? cardTypeTheme.attack;
   const diffColor = difficultyColor[card.task.difficulty];
   const isDisabled = playing || !affordable;
@@ -232,7 +174,7 @@ export default function Card({ card, index, onClick, playing, affordable, energy
         }}
       >
         <span className="font-pixel" style={{ fontSize: "0.5rem", color: "var(--px-text-dim)" }}>
-          PWR
+          STY
         </span>
         <span
           className="font-pixel flex items-center justify-center"

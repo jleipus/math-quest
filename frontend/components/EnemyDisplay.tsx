@@ -4,12 +4,12 @@ import Image from "next/image";
 
 type Props = {
   hp: number;
-  maxHp: number;
+  maxHP: number;
   shake: boolean;
   nextDamage: number;
 };
 
-export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
+export default function EnemyDisplay({ hp, maxHP: maxHp, shake, nextDamage }: Props) {
   const health_pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
 
   return (
@@ -27,7 +27,7 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
             lineHeight: 1.8,
           }}
         >
-          ⚠ Incoming: {nextDamage} dmg
+          ! Inkommande: {nextDamage} skada
         </div>
       )}
 
@@ -54,11 +54,6 @@ export default function EnemyDisplay({ hp, maxHp, shake, nextDamage }: Props) {
           height={80}
           style={{ imageRendering: "pixelated" }}
         />
-      </div>
-
-      {/* ENEMY label */}
-      <div className="font-pixel text-sm" style={{ color: "#e05050" }}>
-        ENEMY
       </div>
 
       {/* HP numbers */}

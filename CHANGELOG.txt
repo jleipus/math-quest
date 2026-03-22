@@ -1,20 +1,57 @@
+0.2.2
+
+- Translate to Swedish
+- Major refactor
+- Minor fixes
+
+0.2.1
+
+- Add feedback survey
+- Add tutorial overlay
+- Add anonymous login
+
+0.2.0
+
+- Add Firebase user management
+
+0.1.6
+
+- Refactor to move all game logic to frontend
+
+0.1.5
+
+- Add CORS protection
+- Add rate limiting
+- Add optional API key protection
+- Add session ownership keys
+
+0.1.4
+
+- Add debug logging in frontend
+- Generate tasks grouped by topic to reduce request count
+- Add pause menu
+- Prompt tweaks
+- UI tweaks
+- Reduce card power on incorrect answer attempts
+- Change StartPage title text
+
 0.1.3
 
-- Clear TaskRegistry after each hand.
-- Cap session count, add TTL.
-- Fix hint prompt to require english responses.
-- Fix canvas cropping when rasterizing image.
-- Include previous hint history when requesting hint.
+- Clear TaskRegistry after each hand
+- Cap session count, add TTL
+- Fix hint prompt to require english responses
+- Fix canvas cropping when rasterizing image
+- Include previous hint history when requesting hint
 
 0.1.2
 
-- Fix scaling.
+- Fix scaling
 
 0.1.1
 
-- New image in start page.
-- Remove CORS rules.
+- New image in start page
+- Remove CORS rules
 
 0.1.0
 
-- Initial version.
+- Initial version

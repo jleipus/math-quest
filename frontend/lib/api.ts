@@ -1,58 +1,34 @@
+import { getIdToken } from "./firebase";
 import type {
-  HelpRequest,
-  HelpResponse,
-  InitGameRequest,
-  InitGameResponse,
-  DrawHandRequest,
-  DrawHandResponse,
-  EndTurnRequest,
-  EndTurnResponse,
-  AnswerRequest,
-  AnswerResponse,
-  PlayCardRequest,
-  PlayCardResponse,
+  FetchHandRequest,
+  FetchHandResponse,
+  RecordAnswerRequest,
+  RecordAnswerResponse,
+  HintRequest,
+  HintResponse,
   UserModelResponse,
 } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
-export async function requestHelp({
-  session_id,
-  task_id,
-  student_work,
-}: HelpRequest): Promise<HelpResponse> {
-  return post<HelpResponse>("/agent/help", { session_id, task_id, student_work });
+export async function fetchHand(payload: FetchHandRequest): Promise<FetchHandResponse> {
+  return post<FetchHandResponse>("/game/hand", payload);
 }
 
-export async function initGame({ grade }: InitGameRequest): Promise<InitGameResponse> {
-  return post<InitGameResponse>("/game/init", { grade });
+export async function recordAnswer(payload: RecordAnswerRequest): Promise<RecordAnswerResponse> {
+  return post<RecordAnswerResponse>("/game/answer", payload);
 }
 
-export async function drawHand({ session_id }: DrawHandRequest): Promise<DrawHandResponse> {
-  return post<DrawHandResponse>("/game/draw", { session_id });
+export async function requestHint(payload: HintRequest): Promise<HintResponse> {
+  return post<HintResponse>("/game/hint", payload);
 }
 
-export async function submitAnswer({
-  session_id,
-  task_id,
-  answer,
-}: AnswerRequest): Promise<AnswerResponse> {
-  return post<AnswerResponse>("/game/answer", { session_id, task_id, answer });
+export async function fetchUserModel(): Promise<UserModelResponse> {
+  return get<UserModelResponse>("/user_model");
 }
 
-export async function playCard({
-  session_id,
-  card_id,
-}: PlayCardRequest): Promise<PlayCardResponse> {
-  return post<PlayCardResponse>("/game/play_card", { session_id, card_id });
-}
-
-export async function endTurn({ session_id }: EndTurnRequest): Promise<EndTurnResponse> {
-  return post<EndTurnResponse>("/game/end_turn", { session_id });
-}
-
-export async function fetchUserModel(session_id: string): Promise<UserModelResponse> {
-  return get<UserModelResponse>(`/user_model/${session_id}`);
+export async function resetUserModel(): Promise<void> {
+  await del("/user_model");
 }
 
 export async function fetchGrades(): Promise<string[]> {
@@ -60,26 +36,47 @@ export async function fetchGrades(): Promise<string[]> {
   return data.grades;
 }
 
-// Wrapper function for POST
+async function authHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  const token = await getIdToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(await authHeaders()),
+  };
+
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail ?? `Request failed: ${res.status}`);
+    throw new Error((err as { detail?: string }).detail ?? `Request failed: ${res.status}`);
   }
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
-// Wrapper function for GET
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+async function del(path: string): Promise<void> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE}${path}`, { method: "DELETE", headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail ?? `Request failed: ${res.status}`);
+    throw new Error((err as { detail?: string }).detail ?? `Request failed: ${res.status}`);
   }
-  return res.json();
+}
+
+async function get<T>(path: string): Promise<T> {
+  const headers = await authHeaders();
+
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { detail?: string }).detail ?? `Request failed: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
 }

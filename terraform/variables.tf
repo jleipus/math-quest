@@ -33,3 +33,16 @@ variable "gemini_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "allowed_origins" {
+  description = "JSON array string of allowed CORS origins"
+  type        = string
+  default     = "[\"*\"]"
+}
+
+variable "firebase_service_account_json" {
+  description = "Firebase Admin SDK service account JSON (as a single-line string). Required for Firebase Auth token verification."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

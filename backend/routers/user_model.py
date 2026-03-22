@@ -1,14 +1,30 @@
-from uuid import UUID
-
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.models.user_model import UserModelResponse
-from backend.services.user_model import user_model_service
+from backend.security import verify_firebase_token
+from backend.services.firestore_user_model import firestore_user_model_service
 
 router = APIRouter(prefix="/user_model", tags=["user_model"])
 
 
-@router.get("/{session_id}", response_model=UserModelResponse)
-def get_user_model(session_id: UUID) -> UserModelResponse:
-    model = user_model_service.get_or_create(str(session_id))
-    return UserModelResponse(session_id=session_id, topics=model.records)
+@router.get(
+    "",
+    response_model=UserModelResponse,
+)
+def get_user_model(
+    uid: str | None = Depends(verify_firebase_token),
+) -> UserModelResponse:
+    if not uid:
+        raise HTTPException(status_code=401, detail="Sign in to view your profile.")
+    model = firestore_user_model_service.get_or_create(uid)
+    return UserModelResponse(topics=model.records)
+
+
+@router.delete("")
+def reset_user_model(
+    uid: str | None = Depends(verify_firebase_token),
+) -> dict:
+    if not uid:
+        raise HTTPException(status_code=401, detail="Sign in to reset your profile.")
+    firestore_user_model_service.reset(uid)
+    return {"ok": True}

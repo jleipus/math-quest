@@ -46,24 +46,6 @@ class CurriculumService:
             raise RuntimeError(f"No topics found for grade {grade_name!r}.")
         return [t.name for t in grade.topics]
 
-    def get_random_topic(self, grade_name: str) -> str:
-        """Return a random topic name for the given grade.
-
-        Args:
-            grade_name: Grade name as stored in TinyDB, e.g. ``"Årskurs 4"``.
-
-        Returns:
-            A randomly chosen topic name from that grade.
-
-        Raises:
-            RuntimeError: If the grade is not found or has no topics.
-        """
-        grades = self._load_tree()
-        grade = next((g for g in grades if g.name == grade_name), None)
-        if not grade or not grade.topics:
-            raise RuntimeError(f"No topics found for grade {grade_name!r}.")
-        return random.choice(grade.topics).name
-
     def retrieve_context(self, grade: str, topic: str, question: str, top_k: int | None = None) -> str:
         """Query ChromaDB for lesson text relevant to the grade, topic, and question.
 
@@ -83,8 +65,20 @@ class CurriculumService:
         k = top_k if top_k is not None else settings.rag_top_k
 
         collection = self._get_chroma_collection()
+        query_text = f"{topic}: {question}"
 
-        results = collection.query(query_texts=[f"{grade} {topic}: {question}"], n_results=k)
+        # Filter to the requested grade so chunks from other grades are excluded.
+        # Fall back to an unfiltered query if the grade has fewer than k indexed chunks
+        # (ChromaDB raises an error when n_results exceeds the filtered result set size).
+        try:
+            results = collection.query(
+                query_texts=[query_text],
+                n_results=k,
+                where={"grade": grade},
+            )
+        except Exception:
+            results = collection.query(query_texts=[query_text], n_results=k)
+
         documents = results.get("documents", [[]])[0]
         if not documents:
             raise RuntimeError(f"No curriculum context found for {grade!r} / {topic!r}.")

@@ -5,7 +5,7 @@ type Props = {
   loading: boolean;
 };
 
-export default function AgentChat({ messages, loading }: Props) {
+export default function HintDisplay({ messages, loading }: Props) {
   return (
     <div
       style={{
@@ -40,7 +40,7 @@ export default function AgentChat({ messages, loading }: Props) {
         {/* If no messages */}
         {messages.length === 0 && !loading && (
           <p className="font-pixel text-xs leading-loose" style={{ color: "var(--px-text-dim)" }}>
-            Ask for a hint and MiniGuide will help you here.
+            Be om en ledtråd så hjälper MiniGuide dig här.
           </p>
         )}
 
@@ -67,7 +67,7 @@ export default function AgentChat({ messages, loading }: Props) {
             className="font-pixel animate-pixel-pulse text-xs"
             style={{ color: "var(--px-text-dim)" }}
           >
-            ▌ Thinking…
+            | Tänker...
           </div>
         )}
       </div>
