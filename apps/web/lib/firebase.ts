@@ -29,9 +29,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+  ? (getApps().length ? getApps()[0] : initializeApp(firebaseConfig))
+  : null;
+
+// auth and db are null during SSR/build (no credentials); only used client-side.
+export const auth = app ? getAuth(app) : (null as any);
+export const db = app ? getFirestore(app) : (null as any);
 
 export async function signInWithGoogle(): Promise<User> {
   const provider = new GoogleAuthProvider();
@@ -41,16 +45,18 @@ export async function signInWithGoogle(): Promise<User> {
 
 export async function signOut(): Promise<void> {
   _signInPromise = null;
-  await _signOut(auth);
+  if (auth) await _signOut(auth);
 }
 
 export async function getIdToken(): Promise<string | null> {
+  if (!auth) return null;
   const user = auth.currentUser;
   if (!user) return null;
   return user.getIdToken();
 }
 
 export function onAuthStateChanged(callback: (user: User | null) => void): () => void {
+  if (!auth) { callback(null); return () => {}; }
   return _onAuthStateChanged(auth, callback);
 }
 
@@ -61,6 +67,7 @@ let _signInPromise: Promise<User> | null = null;
  * Google), does nothing. Otherwise signs in anonymously.
  */
 export async function ensureSignedIn(): Promise<User> {
+  if (!auth) throw new Error("Firebase is not configured. Set NEXT_PUBLIC_FIREBASE_* env vars.");
   if (_signInPromise) return _signInPromise;
   _signInPromise = (async () => {
     // Wait for the first auth state event, which signals Firebase has finished

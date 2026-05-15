@@ -65,7 +65,7 @@ jobs:
             --build-arg "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" \
             -t $REGISTRY/mathquest-frontend:$VERSION \
             -t $REGISTRY/mathquest-frontend:latest \
-            ./frontend
+            ./apps/web
           docker push $REGISTRY/mathquest-frontend:$VERSION
           docker push $REGISTRY/mathquest-frontend:latest
 
