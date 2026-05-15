@@ -10,4 +10,4 @@ Mathematics classrooms often struggle to support students with widely different 
 This project presents the design of a gamified web-based tutoring system for primary school students aged 10-12, where mathematical challenges are embedded in a turn-based card combat game.
 The system uses a RAG architecture constrained by a pedagogical strategy, designed so that the AI provides guiding questions rather than direct answers.
 
-[Read the full report (PDF)](report/report.pdf)
+[Read the full report (PDF)](report.pdf)
