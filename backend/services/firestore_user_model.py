@@ -1,4 +1,5 @@
 import logging
+from collections import OrderedDict
 from threading import Lock
 from typing import Any
 
@@ -17,12 +18,21 @@ def _get_db():
     return firestore.client()
 
 
-class FirestoreUserModelService:
-    """Manages per-user UserModels backed by Firestore."""
+# Cap the in-memory cache so the process can't grow unbounded.
+_DEFAULT_MAX_CACHED_USERS = 64
 
-    def __init__(self) -> None:
+
+class FirestoreUserModelService:
+    """Manages per-user UserModels backed by Firestore.
+
+    Holds a bounded LRU cache of UserModels in front of Firestore.
+    """
+
+    def __init__(self, max_cached_users: int = _DEFAULT_MAX_CACHED_USERS) -> None:
         self._lock = Lock()
-        self._cache: dict[str, UserModel] = {}
+        self._max_cached_users = max_cached_users
+        # Ordered by recency of use; oldest entry is evicted first.
+        self._cache: OrderedDict[str, UserModel] = OrderedDict()
 
     @staticmethod
     def _to_doc(model: UserModel) -> dict[str, Any]:
@@ -75,10 +85,18 @@ class FirestoreUserModelService:
             logger.warning("Firestore save failed for uid=%s: %s", uid, exc)
 
     def _get_or_create_unlocked(self, uid: str) -> UserModel:
-        if uid not in self._cache:
-            loaded = self._load(uid)
-            self._cache[uid] = loaded if loaded is not None else UserModel()
-        return self._cache[uid]
+        cached = self._cache.get(uid)
+        if cached is not None:
+            self._cache.move_to_end(uid)  # mark most-recently used
+            return cached
+
+        loaded = self._load(uid)
+        model = loaded if loaded is not None else UserModel()
+        self._cache[uid] = model
+        # Evict least-recently-used entries beyond the cap.
+        while len(self._cache) > self._max_cached_users:
+            self._cache.popitem(last=False)
+        return model
 
     def get_or_create(self, uid: str) -> UserModel:
         with self._lock:
