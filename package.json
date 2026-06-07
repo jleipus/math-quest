@@ -9,6 +9,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "test": "turbo test",
     "gen:api-types": "poetry run python -m backend.scripts.export_openapi && npm run gen:api-types --workspace @mathquest/web"
   },
   "devDependencies": {

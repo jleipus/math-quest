@@ -235,6 +235,14 @@ export interface components {
             difficulty: string;
             /** Expected Answer */
             expected_answer: string;
+            /**
+             * Answer Type
+             * @default number
+             * @enum {string}
+             */
+            answer_type: "number" | "fraction" | "text";
+            /** Accepted Answers */
+            accepted_answers?: string[];
         };
         /**
          * TopicRecord

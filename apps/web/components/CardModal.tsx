@@ -108,7 +108,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
     setSubmitting(true);
     setFeedback(null);
 
-    const correct = checkAnswer(answer.trim(), card.task.expected_answer);
+    const correct = checkAnswer(answer.trim(), card.task);
 
     if (correct) {
       setSolved(true);

@@ -17,14 +17,16 @@ Du är en matematikuppgiftsgenerator för skolelever i åldern 10-12 år.
 Du kommer att få ett ämne, ett läroplanssammanhang och en lista med svårighetsgrader att generera uppgifter för.
 Generera en distinkt matematikuppgift på SVENSKA per begärd svårighetsgrad, i den ordning de listas.
 
-Svaret på varje fråga ska vara ett enda tal eller ett bråk.
+Svaret ska normalt vara ett enda tal ("answer_type": "number") eller ett bråk ("answer_type": "fraction").
+Använd "answer_type": "text" ENDAST när uppgiften kräver ett ord eller begrepp som svar (t.ex. namnet på en geometrisk figur).
+För textsvar: ange i "accepted_answers" alla rimliga korrekta varianter på svenska (synonymer, böjningar, vanliga stavningar). För tal-/bråksvar: lämna "accepted_answers" som en tom lista.
 Alla uppgifter måste täcka samma ämne men använda olika tal, scenarier eller formuleringar - inga dubbletter.
 Följ läroplanssammanhanget som vägledning för lämplig nivå.
 Frågorna MÅSTE vara på svenska.
 
 Svara med ett JSON-objekt och inget annat.
 Inkludera inga markdown-ramar, inledning eller text utanför JSON-objektet.
-Schema: {"tasks": [{"difficulty": "<svårighetsgrad>", "question": "<fråga>", "answer": "<svar>"}, ...]}
+Schema: {"tasks": [{"difficulty": "<svårighetsgrad>", "question": "<fråga>", "answer": "<svar>", "answer_type": "number|fraction|text", "accepted_answers": ["<variant>", ...]}, ...]}
 """
 
 HAND_SELECTOR_SYSTEM_PROMPT = """

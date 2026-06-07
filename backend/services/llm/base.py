@@ -50,6 +50,7 @@ def _parse_guidance(raw: str) -> str:
 def _parse_tasks(raw: str, grade: str, topic: str) -> list[Task]:
     """Extract a list of tasks from a batch task JSON response."""
     valid_difficulties = {"easy", "medium", "hard"}
+    valid_answer_types = {"number", "fraction", "text"}
     data = _extract_json(raw)
     raw_tasks = data.get("tasks", [])
     if not isinstance(raw_tasks, list):
@@ -69,6 +70,15 @@ def _parse_tasks(raw: str, grade: str, topic: str) -> list[Task]:
             and answer.strip()
             and difficulty in valid_difficulties
         ):
+            answer_type = str(item.get("answer_type", "number")).lower()
+            if answer_type not in valid_answer_types:
+                answer_type = "number"
+            raw_accepted = item.get("accepted_answers", [])
+            accepted_answers = (
+                [a.strip() for a in raw_accepted if isinstance(a, str) and a.strip()]
+                if isinstance(raw_accepted, list)
+                else []
+            )
             tasks.append(
                 Task(
                     task_id=str(uuid4()),
@@ -77,6 +87,8 @@ def _parse_tasks(raw: str, grade: str, topic: str) -> list[Task]:
                     grade=grade,
                     topic=topic,
                     difficulty=difficulty,
+                    answer_type=answer_type,  # type: ignore[arg-type]
+                    accepted_answers=accepted_answers,
                 )
             )
 

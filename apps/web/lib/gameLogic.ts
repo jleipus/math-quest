@@ -1,4 +1,4 @@
-import type { Card } from "./types";
+import type { Card, Task } from "./types";
 
 const PLAYER_BASE_HP = 100;
 const ENEMY_BASE_HP = 100;
@@ -114,7 +114,33 @@ export function endTurn(state: GameState, newHand: Card[]): GameState {
   };
 }
 
-export function checkAnswer(submitted: string, expected: string): boolean {
+/**
+ * Check a submitted answer against a task. Numeric/fraction tasks use numeric
+ * equivalence; text tasks match (case/space-insensitively) against the expected
+ * answer and any accepted variants the generator provided.
+ */
+export function checkAnswer(submitted: string, task: Task): boolean {
+  const candidates = [task.expected_answer, ...(task.accepted_answers ?? [])];
+
+  if (task.answer_type === "text") {
+    const sub = normalizeText(submitted);
+    return candidates.some((c) => normalizeText(c) === sub);
+  }
+
+  return candidates.some((c) => checkNumeric(submitted, c));
+}
+
+/** Lenient comparison for free-text answers. Keeps Swedish letters (å/ä/ö) intact. */
+function normalizeText(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[.,!?;:]+$/u, "") // drop trailing punctuation
+    .replace(/\s+/gu, " "); // collapse internal whitespace
+}
+
+/** Numeric / fraction equivalence (with an exact-string fast path). */
+function checkNumeric(submitted: string, expected: string): boolean {
   const sub = submitted.trim();
   const exp = expected.trim();
 

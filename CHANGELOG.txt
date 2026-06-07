@@ -7,6 +7,7 @@
 - Fix scaling on small screens
 - Add token usage logging
 - Include past answer attempts in hint prompt
+- Add non-numeric answer support
 
 0.2.3
 

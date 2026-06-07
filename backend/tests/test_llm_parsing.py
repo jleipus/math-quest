@@ -66,6 +66,26 @@ class TestParseTasks:
         with pytest.raises(RuntimeError):
             _parse_tasks(raw, grade="g", topic="t")
 
+    def test_defaults_answer_type_to_number(self):
+        raw = '{"tasks": [{"difficulty": "easy", "question": "q", "answer": "2"}]}'
+        task = _parse_tasks(raw, grade="g", topic="t")[0]
+        assert task.answer_type == "number"
+        assert task.accepted_answers == []
+
+    def test_parses_text_answer_type_and_accepted_answers(self):
+        raw = (
+            '{"tasks": [{"difficulty": "easy", "question": "Vad heter figuren?",'
+            ' "answer": "triangel", "answer_type": "text",'
+            ' "accepted_answers": ["triangel", "triangeln", ""]}]}'
+        )
+        task = _parse_tasks(raw, grade="g", topic="t")[0]
+        assert task.answer_type == "text"
+        assert task.accepted_answers == ["triangel", "triangeln"]  # blanks dropped
+
+    def test_unknown_answer_type_falls_back_to_number(self):
+        raw = '{"tasks": [{"difficulty": "easy", "question": "q", "answer": "2", "answer_type": "essay"}]}'
+        assert _parse_tasks(raw, grade="g", topic="t")[0].answer_type == "number"
+
 
 class TestParseHandSlots:
     def test_filters_to_valid_topics_and_difficulties(self):
