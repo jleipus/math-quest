@@ -1,3 +1,13 @@
+0.3.0
+
+- Add turborepo
+- Switch backend to use poetry
+- Add resume button in home screen
+- Caching fixes
+- Fix scaling on small screens
+- Add token usage logging
+- Include past answer attempts in hint prompt
+
 0.2.3
 
 - Fix multiple anonymous login creation bug
