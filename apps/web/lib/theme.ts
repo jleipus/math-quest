@@ -1,5 +1,13 @@
 import type { CardType, Difficulty } from "./types";
 
+/**
+ * Narrow the backend's free-form difficulty string to one of the UI's levels,
+ * falling back to "medium" for anything unexpected.
+ */
+export function asDifficulty(value: string): Difficulty {
+  return value === "easy" || value === "hard" ? value : "medium";
+}
+
 export const difficultyColor: Record<Difficulty, string> = {
   easy: "#4caf50",
   medium: "#f5c842",

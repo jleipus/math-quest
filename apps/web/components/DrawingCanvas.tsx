@@ -56,10 +56,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const stroke of strokeList) {
-      if (stroke.points.length < 2) continue;
+      const points = stroke.points ?? [];
+      if (points.length < 2) continue;
       ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (const p of stroke.points.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.moveTo(points[0].x, points[0].y);
+      for (const p of points.slice(1)) ctx.lineTo(p.x, p.y);
       ctx.stroke();
     }
   }

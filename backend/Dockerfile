@@ -2,8 +2,16 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY backend/requirements.txt ./backend/requirements.txt
-RUN pip install --no-cache-dir -r backend/requirements.txt
+# Poetry manages dependencies. Install it into the system interpreter and
+# disable venv creation so packages land on the default PATH.
+ENV POETRY_VERSION=2.1.4 \
+    POETRY_VIRTUALENVS_CREATE=false \
+    POETRY_NO_INTERACTION=1
+RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
+
+# Install dependencies first (cached unless the lockfile changes).
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --without dev
 
 COPY backend/ ./backend/
 

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { Card as CardInfo, AttackSubtype, Difficulty } from "../lib/types";
-import { difficultyColor, difficultyMaterial, cardTypeTheme } from "../lib/theme";
+import { difficultyColor, difficultyMaterial, cardTypeTheme, asDifficulty } from "../lib/theme";
 
 type Props = {
   card: CardInfo;
@@ -28,9 +28,13 @@ function getCardSprite(
 
 export default function Card({ card, onClick, playing, affordable, energyCost }: Props) {
   const theme = cardTypeTheme[card.card_type] ?? cardTypeTheme.attack;
-  const diffColor = difficultyColor[card.task.difficulty];
+  const diffColor = difficultyColor[asDifficulty(card.task.difficulty)];
   const isDisabled = playing || !affordable;
-  const sprite = getCardSprite(card.card_type, card.attack_subtype, card.task.difficulty);
+  const sprite = getCardSprite(
+    card.card_type,
+    card.attack_subtype ?? null,
+    asDifficulty(card.task.difficulty),
+  );
 
   return (
     <button
