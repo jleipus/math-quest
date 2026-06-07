@@ -1,0 +1,32 @@
+# Shared by the backend and frontend image builds (both use the repo root as
+# context). Keep build contexts small and never ship local secrets.
+
+# Git
+.git
+.gitignore
+
+# Node
+**/node_modules
+**/.next
+**/.turbo
+
+# Python
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+
+# Local env / secrets
+**/.env
+**/.env.*
+
+# Generated data & logs (rebuilt inside the image)
+backend/data
+data
+logs
+
+# Docs & infra not needed in the app images
+*.md
+report
+report.pdf
+terraform

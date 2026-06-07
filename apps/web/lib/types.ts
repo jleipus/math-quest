@@ -1,86 +1,35 @@
-export type Point = {
-  x: number;
-  y: number;
-};
+/**
+ * Frontend API types.
+ *
+ * These are aliases over the backend's OpenAPI schema (generated into
+ * ./api-schema.ts), which is the single source of truth. After changing the
+ * Pydantic models in backend/models, regenerate with `npm run gen:api-types`
+ * from the repo root.
+ */
+import type { components } from "./api-schema";
 
-export type Stroke = {
-  points: Point[];
-  timestamp_ms: number;
-};
+type Schemas = components["schemas"];
 
+export type Point = Schemas["Point"];
+export type Stroke = Schemas["Stroke"];
+export type Task = Schemas["Task"];
+export type Card = Schemas["Card"];
+export type FetchHandRequest = Schemas["FetchHandRequest"];
+export type FetchHandResponse = Schemas["FetchHandResponse"];
+export type RecordAnswerRequest = Schemas["RecordAnswerRequest"];
+export type RecordAnswerResponse = Schemas["RecordAnswerResponse"];
+export type HintRequest = Schemas["HintRequest"];
+export type HintResponse = Schemas["HintResponse"];
+export type GradesResponse = Schemas["GradesResponse"];
+export type DifficultyRecord = Schemas["DifficultyRecord"];
+export type TopicRecord = Schemas["TopicRecord"];
+export type UserModelResponse = Schemas["UserModelResponse"];
+
+// Inline unions on the Card schema (not standalone OpenAPI components), derived
+// so they still track the backend definition.
+export type CardType = Schemas["Card"]["card_type"];
+export type AttackSubtype = NonNullable<Schemas["Card"]["attack_subtype"]>;
+
+// Frontend-only: the backend types difficulty as a free-form string, but the
+// UI works with a fixed set of levels.
 export type Difficulty = "easy" | "medium" | "hard";
-export type CardType = "attack" | "heal" | "shield";
-export type AttackSubtype = "magic" | "bow" | "sword" | "axe";
-
-export type Task = {
-  task_id: string;
-  question: string;
-  grade: string;
-  topic: string;
-  difficulty: Difficulty;
-  expected_answer: string;
-};
-
-export type Card = {
-  card_id: string;
-  card_name: string;
-  card_power: number;
-  card_type: CardType;
-  attack_subtype: AttackSubtype | null;
-  energy_cost: number;
-  task: Task;
-};
-
-export type FetchHandRequest = {
-  grade: string;
-};
-
-export type FetchHandResponse = {
-  hand: Card[];
-};
-
-export type RecordAnswerRequest = {
-  topic: string;
-  difficulty: string;
-  correct: boolean;
-};
-
-export type RecordAnswerResponse = {
-  ok: boolean;
-};
-
-export type HintRequest = {
-  grade: string;
-  topic: string;
-  difficulty: string;
-  question: string;
-  student_work?: Stroke[];
-  canvas_width?: number;
-  canvas_height?: number;
-  previous_hints?: string[];
-};
-
-export type HintResponse = {
-  guiding_question: string;
-};
-
-export type GradesResponse = {
-  grades: string[];
-};
-
-export type DifficultyRecord = {
-  topic: string;
-  difficulty: string;
-  attempts: number;
-  hints: number;
-  correct: number;
-};
-
-export type TopicRecord = {
-  topic: string;
-  records: Record<string, DifficultyRecord>;
-};
-
-export type UserModelResponse = {
-  topics: TopicRecord[];
-};
