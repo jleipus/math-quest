@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from backend.config import get_settings
 from backend.services.llm.base import LLMProvider, LLMService
 
@@ -23,4 +25,14 @@ def _build_provider() -> LLMProvider:
     raise ValueError(f"Unknown llm_provider: {settings.llm_provider!r}. Choose mock, gemini, or claude.")
 
 
-llm_service = LLMService(_build_provider())
+@lru_cache(maxsize=1)
+def get_llm_service() -> LLMService:
+    return LLMService(_build_provider())
+
+
+def __getattr__(name: str) -> object:
+    # Lazily build the service on first access so that merely importing this
+    # package (e.g. to reach submodules in tests) doesn't require an API key.
+    if name == "llm_service":
+        return get_llm_service()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
