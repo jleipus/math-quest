@@ -44,6 +44,13 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     return ctx ?? null;
   }
 
+  function drawDot(ctx: CanvasRenderingContext2D, p: Point) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  }
+
   // Keep strokesRef in sync (runs before paint, so the ResizeObserver never reads stale data).
   useLayoutEffect(() => {
     strokesRef.current = strokes;
@@ -57,7 +64,11 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const stroke of strokeList) {
       const points = stroke.points ?? [];
-      if (points.length < 2) continue;
+      if (points.length === 0) continue;
+      if (points.length === 1) {
+        drawDot(ctx, points[0]);
+        continue;
+      }
       ctx.beginPath();
       ctx.moveTo(points[0].x, points[0].y);
       for (const p of points.slice(1)) ctx.lineTo(p.x, p.y);
@@ -100,12 +111,14 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function getPos(e: React.MouseEvent<HTMLCanvasElement>): Point {
+  function getPos(e: React.PointerEvent<HTMLCanvasElement>): Point {
     const r = canvasRef.current!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
-  function onMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!e.isPrimary) return;
+    canvasRef.current?.setPointerCapture(e.pointerId);
     drawing.current = true;
     const p = getPos(e);
     currentStroke.current = [p];
@@ -114,7 +127,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx?.moveTo(p.x, p.y);
   }
 
-  function onMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!drawing.current) return;
     const p = getPos(e);
     currentStroke.current.push(p);
@@ -123,11 +136,15 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     ctx?.stroke();
   }
 
-  function onMouseUp() {
+  function onPointerUp() {
     if (!drawing.current) return;
     drawing.current = false;
     const pts = currentStroke.current;
-    if (pts.length > 1) setStrokes((s) => [...s, { points: [...pts], timestamp_ms: Date.now() }]);
+    if (pts.length === 1) {
+      const ctx = getCtx();
+      if (ctx) drawDot(ctx, pts[0]);
+    }
+    if (pts.length >= 1) setStrokes((s) => [...s, { points: [...pts], timestamp_ms: Date.now() }]);
     currentStroke.current = [];
   }
 
@@ -164,11 +181,20 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
     <div style={{ position: "relative", width: "100%", height: "100%", background: "#f5f0f8" }}>
       <canvas
         ref={canvasRef}
-        style={{ display: "block", width: "100%", height: "100%", cursor: "crosshair" }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
+        // touchAction: none stops the browser from scrolling/zooming the page
+        // while drawing with a finger.
+        style={{
+          display: "block",
+          width: "100%",
+          height: "100%",
+          cursor: "crosshair",
+          touchAction: "none",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onPointerLeave={onPointerUp}
       />
       <div style={{ position: "absolute", right: 8, top: 8, display: "flex", gap: 6 }}>
         <button

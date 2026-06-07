@@ -24,16 +24,18 @@ export default function CardHand({ hand, onClickCard, playingCardId, energy }: P
   }
 
   return (
-    <div className="flex flex-wrap justify-center gap-4 px-2">
+    // A single row that scrolls sideways as soon as the cards no longer fit.
+    <div className="flex gap-4 px-2 py-2 overflow-x-auto overscroll-x-contain px-scroll [justify-content:safe_center]">
       {hand.map((card) => (
-        <Card
-          key={card.card_id}
-          card={card}
-          onClick={onClickCard}
-          playing={playingCardId === card.card_id}
-          affordable={canPlayCard(energy, card)}
-          energyCost={card.energy_cost}
-        />
+        <div key={card.card_id} className="shrink-0">
+          <Card
+            card={card}
+            onClick={onClickCard}
+            playing={playingCardId === card.card_id}
+            affordable={canPlayCard(energy, card)}
+            energyCost={card.energy_cost}
+          />
+        </div>
       ))}
     </div>
   );

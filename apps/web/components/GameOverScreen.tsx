@@ -14,7 +14,7 @@ export default function GameOverScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center p-8">
       <div
         className="flex flex-col items-center gap-8 w-full max-w-2xl"
         style={{

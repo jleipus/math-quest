@@ -56,7 +56,7 @@ export default function StartScreen() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-8">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center p-8">
       {/* Title */}
       <div className="mb-10 text-center">
         <Image src="/logo.png" alt="MathQuest" width={120} height={120} className="mb-4 mx-auto" />
@@ -79,7 +79,7 @@ export default function StartScreen() {
       </div>
 
       {/* Two-column layout: game panel | auth panel */}
-      <div className="flex w-full max-w-3xl gap-6 items-start">
+      <div className="flex w-full max-w-3xl flex-col gap-6 md:flex-row md:items-start">
         {/* Left: game setup */}
         <div className="px-panel flex-1 rounded-none p-8">
           {/* Resume a previously started session */}
@@ -159,7 +159,7 @@ export default function StartScreen() {
         </div>
 
         {/* Right: auth panel */}
-        <div className="w-72 flex-shrink-0">
+        <div className="w-full md:w-72 md:flex-shrink-0">
           <AuthPanel onAuthChange={handleAuthChange} />
         </div>
       </div>

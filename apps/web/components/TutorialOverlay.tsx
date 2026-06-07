@@ -106,7 +106,11 @@ export default function TutorialOverlay({ onDone }: { onDone: () => void }) {
 
     const side = current.side;
     const GAP = 18;
-    const base: React.CSSProperties = { position: "fixed", zIndex: 10001, maxWidth: 320 };
+    const base: React.CSSProperties = {
+      position: "fixed",
+      zIndex: 10001,
+      maxWidth: "min(320px, calc(100vw - 24px))",
+    };
 
     if (side === "bottom") {
       return { ...base, top: hy + hh + GAP, left: hx + hw / 2, transform: "translateX(-50%)" };
@@ -193,7 +197,7 @@ export default function TutorialOverlay({ onDone }: { onDone: () => void }) {
           position: "fixed",
           inset: 0,
           width: "100vw",
-          height: "100vh",
+          height: "100dvh",
           zIndex: 10000,
           pointerEvents: "none",
         }}

@@ -208,11 +208,11 @@ export default function BattleScreen() {
 
   return (
     <div
-      className="relative flex min-h-screen flex-col p-4 select-none"
+      className="relative flex min-h-[100dvh] flex-col p-4 select-none"
       style={{ color: "var(--px-text)" }}
     >
       {/* Top bar */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div className="flex flex-col gap-2">
           <div data-tutorial="player-hp">
             <PlayerDisplay hp={game.playerHP} maxHp={game.playerMaxHP} flash={playerFlash} />

@@ -44,7 +44,7 @@ export default function Card({ card, onClick, playing, affordable, energyCost }:
       disabled={isDisabled}
       title={!affordable ? `Need ${energyCost} energy` : "Click to play"}
       style={{
-        width: 230,
+        width: "clamp(150px, 44vw, 230px)",
         minHeight: 264,
         background: theme.bg,
         border: `3px solid ${theme.border}`,

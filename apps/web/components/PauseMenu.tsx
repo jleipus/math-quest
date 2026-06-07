@@ -28,7 +28,7 @@ export default function PauseMenu({ onResume }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(10,0,8,0.85)", backdropFilter: "blur(4px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onResume();
@@ -37,7 +37,7 @@ export default function PauseMenu({ onResume }: Props) {
       <div
         className="flex flex-col gap-6"
         style={{
-          width: 360,
+          width: "min(92vw, 360px)",
           background: "#1d0a1a",
           border: "3px solid var(--px-panel-border)",
           boxShadow: "8px 8px 0 #0a0008",

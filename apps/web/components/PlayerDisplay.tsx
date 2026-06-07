@@ -35,7 +35,7 @@ export default function PlayerDisplay({ hp, maxHp, flash }: Props) {
       </div>
 
       {/* Bar track */}
-      <div className="px-bar-track overflow-hidden" style={{ height: 16, width: 240 }}>
+      <div className="px-bar-track overflow-hidden" style={{ height: 16, width: "min(240px, 60vw)" }}>
         <div
           style={{
             height: "100%",

@@ -46,6 +46,15 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
     inputRef.current?.focus();
   }, []);
 
+  // Lock the page behind the modal so touch-scrolling stays inside it.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   // Answer player has entered into input box.
   const [answer, setAnswer] = useState(savedState?.answer ?? "");
   // Whether answer submission is being processed.
@@ -163,7 +172,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
         className="relative w-full flex flex-col"
         style={{
           maxWidth: 1400,
-          height: "95vh",
+          height: "95dvh",
           background: "#1d0a1a",
           border: "3px solid var(--px-panel-border)",
           boxShadow: "8px 8px 0 #0a0008",
@@ -172,7 +181,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
       >
         {/* Header */}
         <div className="mb-6">
-          <div className="mb-3 flex items-center gap-4">
+          <div className="mb-3 flex flex-wrap items-center gap-4">
             <span className="font-pixel text-sm" style={{ color: "var(--px-text-dim)" }}>
               UPPGIFT - {card.task.topic.toUpperCase()} ({card.task.difficulty.toUpperCase()})
             </span>
@@ -244,12 +253,10 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
 
           {feedback && (
             <div
-              className={`font-pixel text-sm ${feedback.type === "error" ? "animate-shake" : ""}`}
+              className={`font-pixel text-sm left-0 right-6 lg:right-[404px] ${feedback.type === "error" ? "animate-shake" : ""}`}
               style={{
                 position: "absolute",
                 top: "100%",
-                left: 0,
-                right: 380 + 24,
                 marginTop: 6,
                 padding: "8px 16px",
                 background:
@@ -265,9 +272,15 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
           )}
         </div>
 
-        {/* Two-column body: canvas | hint + chat */}
-        <div className="flex gap-6" style={{ flex: 1, minHeight: 0, alignItems: "stretch" }}>
-          <div style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column" }}>
+        {/* Body: canvas | hint + chat. Stacks vertically on narrow screens. */}
+        <div
+          className="flex flex-col gap-6 overflow-y-auto overscroll-contain lg:flex-row lg:overflow-visible"
+          style={{ flex: 1, minHeight: 0, alignItems: "stretch" }}
+        >
+          <div
+            className="min-h-[300px] lg:min-h-0"
+            style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column" }}
+          >
             <p
               className="font-pixel mb-3 text-sm"
               style={{ color: "var(--px-text-dim)", flexShrink: 0 }}
@@ -280,9 +293,8 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
           </div>
 
           <div
+            className="w-full lg:w-[380px] lg:flex-shrink-0"
             style={{
-              width: 380,
-              flexShrink: 0,
               display: "flex",
               flexDirection: "column",
               gap: 16,
