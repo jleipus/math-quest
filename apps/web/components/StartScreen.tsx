@@ -10,7 +10,9 @@ import AuthPanel from "./AuthPanel";
 
 export default function StartScreen() {
   const router = useRouter();
-  const { initGame } = useGame();
+  const { game, hydrated, initGame } = useGame();
+
+  const canResume = hydrated && !!game && game.playerHP > 0;
 
   const [grades, setGrades] = useState<string[]>([]);
   const [grade, setGrade] = useState("");
@@ -29,6 +31,10 @@ export default function StartScreen() {
   }, []);
 
   const handleAuthChange = useCallback((_user: User | null) => {}, []);
+
+  function handleResume() {
+    router.push("/game");
+  }
 
   async function handleStart() {
     if (!grade) return;
@@ -76,6 +82,21 @@ export default function StartScreen() {
       <div className="flex w-full max-w-3xl gap-6 items-start">
         {/* Left: game setup */}
         <div className="px-panel flex-1 rounded-none p-8">
+          {/* Resume a previously started session */}
+          {canResume && (
+            <div className="mb-6">
+              <button onClick={handleResume} className="px-btn w-full py-4 text-sm">
+                &gt; Fortsätt spelet
+              </button>
+              <p
+                className="font-pixel mt-4 text-center text-xs"
+                style={{ color: "var(--px-text-dim)", letterSpacing: "0.08em" }}
+              >
+                — eller starta en ny omgång —
+              </p>
+            </div>
+          )}
+
           {/* Grade selector */}
           <label className="mb-5 block">
             <span
