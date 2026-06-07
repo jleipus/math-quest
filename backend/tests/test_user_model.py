@@ -1,12 +1,3 @@
-"""
-Tests for UserModel and user_model_to_profile_context.
-
-UserModelService (TinyDB-backed) was replaced by FirestoreUserModelService and
-is no longer present - those persistence tests are removed accordingly.
-"""
-
-import pytest
-
 from backend.models.user_model import DifficultyRecord, TopicRecord
 from backend.services.user_model import UserModel, user_model_to_profile_context
 
