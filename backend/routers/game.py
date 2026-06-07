@@ -90,5 +90,6 @@ def request_hint(
         image_png=image_png,
         profile_context=profile_context,
         previous_hints=payload.previous_hints or None,
+        previous_attempts=payload.previous_attempts or None,
         session_id=uid or "anonymous",
     )

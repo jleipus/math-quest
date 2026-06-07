@@ -50,12 +50,19 @@ def build_guide_user_text(
     has_image: bool,
     profile_context: str = "",
     previous_hints: list[str] | None = None,
+    previous_attempts: list[str] | None = None,
 ) -> str:
     text = f"""Läroplanssammanhang:\n{context}\n\nMatematikuppgift som eleven arbetar med:\n{question}\n\n"""
     if has_image:
         text += "Ta hänsyn till elevens inlämnade handskrivna arbete (se bild).\n\n"
     if profile_context:
         text += f"Elevprofil:\n{profile_context}\n\n"
+    if previous_attempts:
+        attempts = "\n".join(f"- {a}" for a in previous_attempts)
+        text += (
+            "Elevens tidigare felaktiga svar på denna uppgift "
+            f"(använd dem för att förstå elevens missuppfattning):\n{attempts}\n\n"
+        )
     if previous_hints:
         history = "\n".join(f"- {q}" for q in previous_hints)
         text += f"Tidigare ledande frågor som redan givits till denna elev:\n{history}\n\n"

@@ -15,6 +15,7 @@ export type CardModalState = {
   solved: boolean;
   strokes: Stroke[];
   wrongAttempts: number;
+  previousAttempts: string[];
 };
 
 type Props = {
@@ -69,6 +70,10 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
   const [solved, setSolved] = useState(savedState?.solved ?? false);
   // Incorrect answer attempts.
   const [wrongAttempts, setWrongAttempts] = useState(savedState?.wrongAttempts ?? 0);
+  // The student's past wrong answers (sent to the LLM for hint context).
+  const [previousAttempts, setPreviousAttempts] = useState<string[]>(
+    savedState?.previousAttempts ?? [],
+  );
 
   const currentPower = penalisedPower(card.card_power, wrongAttempts);
 
@@ -79,6 +84,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
       solved,
       strokes: canvasRef.current?.getStrokes() ?? [],
       wrongAttempts: wrongAttempts,
+      previousAttempts,
     };
   }
 
@@ -94,7 +100,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [solved, answer, messages, wrongAttempts]);
+  }, [solved, answer, messages, wrongAttempts, previousAttempts]);
 
   async function handleSubmitAnswer() {
     if (!game || !answer.trim() || solved || submitting) return;
@@ -115,6 +121,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
 
       recordWrongAttempt(card.card_id);
       setWrongAttempts(newWrongAttempts);
+      setPreviousAttempts((prev) => [...prev, answer.trim()]);
       setFeedback({ type: "error", text: `Inte riktigt - försök igen.${penaltyText}` });
     }
 
@@ -145,6 +152,7 @@ export default function CardModal({ card, savedState, onPlayCard, onClose }: Pro
         canvas_width: width,
         canvas_height: height,
         previous_hints: messages.length > 0 ? messages : undefined,
+        previous_attempts: previousAttempts.length > 0 ? previousAttempts : undefined,
       });
       setMessages((prev) => [...prev, result.guiding_question]);
     } catch (e) {

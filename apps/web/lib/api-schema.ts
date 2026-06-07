@@ -182,6 +182,8 @@ export interface components {
             canvas_height: number;
             /** Previous Hints */
             previous_hints?: string[];
+            /** Previous Attempts */
+            previous_attempts?: string[];
         };
         /** HintResponse */
         HintResponse: {
