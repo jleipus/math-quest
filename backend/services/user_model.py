@@ -34,11 +34,9 @@ def user_model_to_profile_context(records: list[TopicRecord]) -> str:
             if rec.hints == 0 and accuracy > 0.9:
                 patterns.append("solving confidently without help")
 
-            pattern_str = f" — {', '.join(patterns)}" if patterns else ""
+            pattern_str = f" - {', '.join(patterns)}" if patterns else ""
             lines.append(
-                f"\t{rec.difficulty}: {level}, "
-                f"{rec.correct}/{rec.attempts} correct, "
-                f"{rec.hints} hint(s),{pattern_str}"
+                f"\t{rec.difficulty}: {level}, {rec.correct}/{rec.attempts} correct, {rec.hints} hint(s),{pattern_str}"
             )
 
     return "\n".join(lines)

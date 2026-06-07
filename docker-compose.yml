@@ -1,13 +1,12 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8080:8080"
     env_file:
       - .env
-    environment:
-      DAIS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
     restart: unless-stopped
     logging:
       driver: json-file
@@ -17,9 +16,10 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-    environment:
-      BACKEND_URL: http://backend:8080
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_URL: http://localhost:8080
     ports:
       - "3000:3000"
     depends_on:

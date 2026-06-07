@@ -23,11 +23,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Poetry
+        run: pipx install poetry
+
       - name: Install dependencies
-        run: pip install -r backend/requirements.txt
+        run: poetry install --with dev
 
       - name: Run pytest
-        run: python -m pytest backend/tests/ -v
+        run: poetry run pytest backend/tests/ -v
 
   build:
     runs-on: ubuntu-latest
@@ -65,7 +68,8 @@ jobs:
             --build-arg "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" \
             -t $REGISTRY/mathquest-frontend:$VERSION \
             -t $REGISTRY/mathquest-frontend:latest \
-            ./frontend
+            -f ./apps/web/Dockerfile \
+            .
           docker push $REGISTRY/mathquest-frontend:$VERSION
           docker push $REGISTRY/mathquest-frontend:latest
 

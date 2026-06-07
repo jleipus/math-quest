@@ -1,4 +1,3 @@
-import random
 from threading import Lock
 from typing import Any
 
@@ -13,6 +12,7 @@ class CurriculumService:
         self._lock = Lock()
         self._db: Any = None  # TinyDB instance
         self._chroma_client: Any = None  # ChromaDB client
+        self._tree: list[Grade] | None = None  # parsed curriculum tree (static)
 
     def get_grades(self) -> list[str]:
         """Return grade names from TinyDB.
@@ -94,16 +94,23 @@ class CurriculumService:
         return self._db
 
     def _load_tree(self) -> list[Grade]:
-        """Load the curriculum tree from the shared TinyDB connection.
+        """Return the curriculum tree, parsing it from TinyDB on first call.
+
+        The tree is static (rebuilt only by ``index_curriculum``), so it is
+        cached in memory after the first load to avoid re-reading and
+        re-validating every row on each request.
 
         Raises:
             RuntimeError: If the database cannot be opened or parsed.
         """
+        if self._tree is not None:
+            return self._tree
         try:
             with self._lock:
-                db = self._get_db()
-                rows = db.all()
-            return [Grade.model_validate(row) for row in rows]
+                if self._tree is None:  # double-checked locking
+                    rows = self._get_db().all()
+                    self._tree = [Grade.model_validate(row) for row in rows]
+            return self._tree
         except Exception as exc:
             raise RuntimeError(f"Failed to load curriculum tree: {exc}") from exc
 

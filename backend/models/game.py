@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+AnswerType = Literal["number", "fraction", "text"]
+
 
 class Task(BaseModel):
     task_id: str
@@ -10,6 +12,8 @@ class Task(BaseModel):
     topic: str
     difficulty: str
     expected_answer: str
+    answer_type: AnswerType = "number"
+    accepted_answers: list[str] = Field(default_factory=list)
 
 
 CardType = Literal["attack", "heal", "shield"]

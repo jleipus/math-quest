@@ -23,6 +23,7 @@ class HintRequest(BaseModel):
     canvas_width: int = 512
     canvas_height: int = 512
     previous_hints: list[str] = Field(default_factory=list)
+    previous_attempts: list[str] = Field(default_factory=list)
 
 
 class HintResponse(BaseModel):

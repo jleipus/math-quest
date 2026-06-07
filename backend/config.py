@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     gemini_temperature: float = Field(default=0.2, ge=0.0, le=1.0)
 
     claude_api_key: str | None = None
-    claude_model: str = "claude-sonnet-4-5"
+    claude_model: str = "claude-haiku-4-5"
     claude_api_base: str = "https://api.anthropic.com/v1"
 
     # Game mechanics
