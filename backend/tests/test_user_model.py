@@ -2,7 +2,7 @@
 Tests for UserModel and user_model_to_profile_context.
 
 UserModelService (TinyDB-backed) was replaced by FirestoreUserModelService and
-is no longer present — those persistence tests are removed accordingly.
+is no longer present - those persistence tests are removed accordingly.
 """
 
 import pytest
@@ -12,7 +12,7 @@ from backend.services.user_model import UserModel, user_model_to_profile_context
 
 
 # ---------------------------------------------------------------------------
-# UserModel — record_attempt
+# UserModel - record_attempt
 # ---------------------------------------------------------------------------
 
 
@@ -55,7 +55,7 @@ class TestRecordAttempt:
 
 
 # ---------------------------------------------------------------------------
-# UserModel — record_hint
+# UserModel - record_hint
 # ---------------------------------------------------------------------------
 
 
@@ -89,7 +89,7 @@ class TestRecordHint:
 
 
 # ---------------------------------------------------------------------------
-# UserModel — records property
+# UserModel - records property
 # ---------------------------------------------------------------------------
 
 
@@ -113,7 +113,7 @@ class TestRecordsProperty:
 
 
 # ---------------------------------------------------------------------------
-# UserModel — get_profile_context (delegates to user_model_to_profile_context)
+# UserModel - get_profile_context (delegates to user_model_to_profile_context)
 # ---------------------------------------------------------------------------
 
 
@@ -156,14 +156,12 @@ class TestGetProfileContext:
 
 
 # ---------------------------------------------------------------------------
-# user_model_to_profile_context — standalone function (TopicRecord input)
+# user_model_to_profile_context - standalone function (TopicRecord input)
 # ---------------------------------------------------------------------------
 
 
 class TestUserModelToProfileContext:
-    def _make_records(
-        self, topic: str, difficulty: str, attempts: int, correct: int, hints: int
-    ) -> list[TopicRecord]:
+    def _make_records(self, topic: str, difficulty: str, attempts: int, correct: int, hints: int) -> list[TopicRecord]:
         return [
             TopicRecord(
                 topic=topic,
@@ -217,19 +215,11 @@ class TestUserModelToProfileContext:
         records = [
             TopicRecord(
                 topic="Addition",
-                records={
-                    "easy": DifficultyRecord(
-                        topic="Addition", difficulty="easy", attempts=2, correct=2, hints=0
-                    )
-                },
+                records={"easy": DifficultyRecord(topic="Addition", difficulty="easy", attempts=2, correct=2, hints=0)},
             ),
             TopicRecord(
                 topic="Division",
-                records={
-                    "hard": DifficultyRecord(
-                        topic="Division", difficulty="hard", attempts=2, correct=0, hints=2
-                    )
-                },
+                records={"hard": DifficultyRecord(topic="Division", difficulty="hard", attempts=2, correct=0, hints=2)},
             ),
         ]
         ctx = user_model_to_profile_context(records)

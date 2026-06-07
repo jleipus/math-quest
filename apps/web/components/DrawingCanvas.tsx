@@ -75,7 +75,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
       const { width, height } = canvas.getBoundingClientRect();
       const w = Math.round(width);
       const h = Math.round(height);
-      // Assigning canvas.width/height clears the bitmap — only do it when the
+      // Assigning canvas.width/height clears the bitmap - only do it when the
       // size actually changed (avoids wiping strokes on layout micro-updates).
       if (canvas.width === w && canvas.height === h) return;
       canvas.width = w;

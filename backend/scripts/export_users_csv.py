@@ -112,7 +112,7 @@ def main() -> None:
         for uid, by_difficulty in user_rows:
             row: dict = {"uid": uid}
 
-            # Difficulty columns — fill zeros for difficulties the user hasn't touched.
+            # Difficulty columns - fill zeros for difficulties the user hasn't touched.
             for difficulty in sorted_difficulties:
                 stats = by_difficulty.get(difficulty, {"attempts": 0, "correct": 0, "hints": 0})
                 row[f"{difficulty}_attempts"] = stats["attempts"]

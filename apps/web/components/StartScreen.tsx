@@ -92,7 +92,7 @@ export default function StartScreen() {
                 className="font-pixel mt-4 text-center text-xs"
                 style={{ color: "var(--px-text-dim)", letterSpacing: "0.08em" }}
               >
-                — eller starta en ny omgång —
+                - eller starta en ny omgång -
               </p>
             </div>
           )}

@@ -2,7 +2,7 @@
 
 const SCALE = 3;
 const NATIVE_H = 160;
-const STRIP_H = NATIVE_H * SCALE; // 480 px — default strip height
+const STRIP_H = NATIVE_H * SCALE; // 480 px - default strip height
 
 interface Layer {
   src: string;
@@ -13,7 +13,7 @@ interface Layer {
 }
 
 const layers: Layer[] = [
-  // Static sky — full viewport, background-cover
+  // Static sky - full viewport, background-cover
   {
     src: "/assets/parallax_mountain_pack/layers/parallax-mountain-bg.png",
     nativeW: 272,
@@ -21,7 +21,7 @@ const layers: Layer[] = [
     zIndex: 0,
   },
 
-  // Far mountains — slowest. Strip is extra tall so the base always reaches
+  // Far mountains - slowest. Strip is extra tall so the base always reaches
   // bottom: 0 regardless of viewport height, eliminating the bottom gap.
   {
     src: "/assets/parallax_mountain_pack/layers/parallax-mountain-montain-far.png",
@@ -47,7 +47,7 @@ const layers: Layer[] = [
     zIndex: 3,
   },
 
-  // Foreground trees — fastest
+  // Foreground trees - fastest
   {
     src: "/assets/parallax_mountain_pack/layers/parallax-mountain-foreground-trees.png",
     nativeW: 544,

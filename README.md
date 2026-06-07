@@ -31,7 +31,7 @@ report/        LaTeX source for the report
 
 ## Environment variables
 
-**Backend** — copy `.env.example` to `.env` in the repo root:
+**Backend** - copy `.env.example` to `.env` in the repo root:
 
 ```bash
 DAIS_LLM_PROVIDER=claude            # or "gemini"
@@ -40,7 +40,7 @@ DAIS_ALLOWED_ORIGINS='["http://localhost:3000"]'
 DAIS_FIREBASE_SERVICE_ACCOUNT_JSON= # optional for local dev
 ```
 
-**Frontend** — create `apps/web/.env.local`:
+**Frontend** - create `apps/web/.env.local`:
 
 ```bash
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
