@@ -62,14 +62,20 @@ class ClaudeProvider(LLMProvider):
             "content-type": "application/json",
         }
         start = time.perf_counter()
-        response = requests.post(
-            f"{api_base}/messages",
-            headers=headers,
-            json=payload,
-            timeout=25,
-        )
+        try:
+            response = requests.post(
+                f"{api_base}/messages",
+                headers=headers,
+                json=payload,
+                timeout=25,
+            )
+        except requests.RequestException as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="The AI service is temporarily unreachable - please try again in a moment.",
+            ) from exc
         latency_ms = (time.perf_counter() - start) * 1000
-        if response.status_code == 529:
+        if response.status_code == 429 or response.status_code >= 500:
             raise HTTPException(status_code=503, detail="The AI service is overloaded - please try again in a moment.")
         response.raise_for_status()
         return response.json(), latency_ms

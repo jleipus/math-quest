@@ -26,11 +26,22 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: poetry install --with dev
 
-      - name: Run pytest
+      - name: Run backend tests
         run: poetry run pytest backend/tests/ -v
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        run: npm test
 
   build:
     runs-on: ubuntu-latest
