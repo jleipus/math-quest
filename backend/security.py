@@ -1,10 +1,6 @@
-import secrets
-
 from fastapi import Header, HTTPException
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-
-from backend.config import get_settings
 
 limiter = Limiter(key_func=get_remote_address)
 

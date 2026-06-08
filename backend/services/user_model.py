@@ -1,5 +1,3 @@
-from typing import Any
-
 from backend.models.user_model import DifficultyRecord, TopicRecord
 
 

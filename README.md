@@ -14,18 +14,23 @@ The system uses a RAG architecture constrained by a pedagogical strategy, design
 
 ## Project structure
 
-This is a monorepo using [npm workspaces](https://docs.npmjs.com/cli/using-npm/workspaces) (JS) and [Poetry](https://python-poetry.org) (Python):
+This repo holds two independent apps — a Next.js frontend and a [Poetry](https://python-poetry.org)-managed
+Python backend:
 
 ```plain
-apps/web/      Next.js frontend (deployed on Firebase App Hosting)
+apps/web/      Next.js frontend (self-contained npm app, deployed on Firebase App Hosting)
 backend/       FastAPI backend (RAG + game logic, deployed on Cloud Run)
 report/        LaTeX source for the report
 ```
 
+`apps/web` is a standalone npm project with its own `package-lock.json`, so all frontend
+commands run from inside `apps/web`. The repo-root `package.json` provides convenience
+launchers (`npm run dev`, `npm run build`, etc.) that forward to it.
+
 The frontend is deployed via [Firebase App Hosting](https://firebase.google.com/docs/app-hosting)
-(configured in `apps/web/apphosting.yaml`), which builds from the connected GitHub repo and
-auto-deploys on push to `master`. The backend image is built and deployed to Cloud Run by the
-`.github/workflows/deploy.yml` workflow.
+(configured in `apps/web/apphosting.yaml`), which builds from the connected GitHub repo
+(root directory `apps/web`) and auto-deploys on push to `master`. The backend image is built
+and deployed to Cloud Run by the `.github/workflows/deploy.yml` workflow.
 
 ## Prerequisites
 
@@ -72,8 +77,9 @@ API docs are then at <http://localhost:8080/docs>.
 **Frontend** (port 3000):
 
 ```bash
+cd apps/web
 npm install
-npm run dev
+npm run dev          # or `npm run dev` from the repo root (forwards here)
 ```
 
 App is served at <http://localhost:3000>.

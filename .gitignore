@@ -7,10 +7,4 @@
 data/*
 logs/*
 
-terraform/.terraform/
-terraform/terraform.tfstate*
-terraform/.terraform.lock.hcl
-
-# monorepo
 node_modules/
-.turbo/

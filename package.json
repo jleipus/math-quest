@@ -2,17 +2,11 @@
   "name": "math-quest",
   "private": true,
   "packageManager": "npm@11.16.0",
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
-    "dev": "npm run dev --workspace @mathquest/web",
-    "build": "npm run build --workspace @mathquest/web",
-    "lint": "npm run lint --workspace @mathquest/web",
-    "test": "npm run test --workspace @mathquest/web",
-    "gen:api-types": "poetry run python -m backend.scripts.export_openapi && npm run gen:api-types --workspace @mathquest/web"
-  },
-  "overrides": {
-    "postcss": "^8.5.15"
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "lint": "npm --prefix apps/web run lint",
+    "test": "npm --prefix apps/web run test",
+    "gen:api-types": "poetry run python -m backend.scripts.export_openapi && npm --prefix apps/web run gen:api-types"
   }
 }

@@ -10,7 +10,7 @@ on:
         required: false
 
 env:
-  REGION: europe-north1
+  REGION: europe-west4
   GAR_REPO: mathquest
 
 jobs:
@@ -36,12 +36,15 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
+        working-directory: apps/web
 
       - name: Run frontend tests
         run: npm test
+        working-directory: apps/web
 
   build:
     runs-on: ubuntu-latest
