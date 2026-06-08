@@ -6,14 +6,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "test": "turbo test",
+    "dev": "npm run dev --workspace @mathquest/web",
+    "build": "npm run build --workspace @mathquest/web",
+    "lint": "npm run lint --workspace @mathquest/web",
+    "test": "npm run test --workspace @mathquest/web",
     "gen:api-types": "poetry run python -m backend.scripts.export_openapi && npm run gen:api-types --workspace @mathquest/web"
-  },
-  "devDependencies": {
-    "turbo": "^2.9.16"
   },
   "overrides": {
     "postcss": "^8.5.15"

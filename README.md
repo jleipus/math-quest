@@ -14,14 +14,18 @@ The system uses a RAG architecture constrained by a pedagogical strategy, design
 
 ## Project structure
 
-This is a monorepo managed with [Turborepo](https://turbo.build) (JS) and [Poetry](https://python-poetry.org) (Python):
+This is a monorepo using [npm workspaces](https://docs.npmjs.com/cli/using-npm/workspaces) (JS) and [Poetry](https://python-poetry.org) (Python):
 
 ```plain
-apps/web/      Next.js frontend
-backend/       FastAPI backend (RAG + game logic)
-terraform/     Cloud Run infrastructure
+apps/web/      Next.js frontend (deployed on Firebase App Hosting)
+backend/       FastAPI backend (RAG + game logic, deployed on Cloud Run)
 report/        LaTeX source for the report
 ```
+
+The frontend is deployed via [Firebase App Hosting](https://firebase.google.com/docs/app-hosting)
+(configured in `apps/web/apphosting.yaml`), which builds from the connected GitHub repo and
+auto-deploys on push to `master`. The backend image is built and deployed to Cloud Run by the
+`.github/workflows/deploy.yml` workflow.
 
 ## Prerequisites
 
@@ -80,7 +84,7 @@ App is served at <http://localhost:3000>.
 docker compose up --build
 ```
 
-Runs the backend on 8080 and the frontend on 3000. The first build is slow because the curriculum index is built into the backend image.
+Runs the backend on 8080. The first build is slow because the curriculum index is built into the backend image. Run the frontend separately with `npm run dev`.
 
 ## Regenerating API types
 

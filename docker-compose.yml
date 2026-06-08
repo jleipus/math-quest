@@ -13,15 +13,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_BACKEND_URL: http://localhost:8080
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    restart: unless-stopped

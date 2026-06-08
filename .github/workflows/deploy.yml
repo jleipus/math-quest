@@ -1,4 +1,4 @@
-name: Deploy to Cloud Run
+name: Deploy backend to Cloud Run
 
 on:
   push:
@@ -46,7 +46,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
-    # Skip build when deploying a specific existing version
     if: inputs.version == ''
     outputs:
       version: ${{ steps.version.outputs.tag }}
@@ -59,7 +58,7 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Build and push images
+      - name: Build and push backend image
         id: version
         run: |
           VERSION=v$(head -1 CHANGELOG.txt)
@@ -71,19 +70,6 @@ jobs:
           docker push $REGISTRY/mathquest-backend:$VERSION
           docker push $REGISTRY/mathquest-backend:latest
 
-          docker build \
-            --build-arg "NEXT_PUBLIC_BACKEND_URL=${{ secrets.BACKEND_URL }}" \
-            --build-arg "NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}" \
-            --build-arg "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}" \
-            --build-arg "NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" \
-            --build-arg "NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}" \
-            -t $REGISTRY/mathquest-frontend:$VERSION \
-            -t $REGISTRY/mathquest-frontend:latest \
-            -f ./apps/web/Dockerfile \
-            .
-          docker push $REGISTRY/mathquest-frontend:$VERSION
-          docker push $REGISTRY/mathquest-frontend:latest
-
           echo "tag=$VERSION" >> $GITHUB_OUTPUT
 
   deploy:
@@ -93,22 +79,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: google-github-actions/setup-gcloud@v2
 
-      - name: Terraform apply
-        working-directory: terraform
+      - name: Write backend env file
         env:
-          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
-          TF_VAR_claude_api_key: ${{ secrets.DAIS_CLAUDE_API_KEY }}
-          TF_VAR_gemini_api_key: ${{ secrets.DAIS_GEMINI_API_KEY }}
-          TF_VAR_llm_provider: ${{ secrets.DAIS_LLM_PROVIDER }}
-          TF_VAR_firebase_service_account_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          TF_VAR_allowed_origins: ${{ secrets.DAIS_ALLOWED_ORIGINS }}
-          TF_VAR_image_tag: ${{ inputs.version != '' && format('v{0}', inputs.version) || needs.build.outputs.version }}
+          DAIS_LLM_PROVIDER: ${{ secrets.DAIS_LLM_PROVIDER }}
+          DAIS_CLAUDE_API_KEY: ${{ secrets.DAIS_CLAUDE_API_KEY }}
+          DAIS_GEMINI_API_KEY: ${{ secrets.DAIS_GEMINI_API_KEY }}
+          DAIS_FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          DAIS_ALLOWED_ORIGINS: ${{ secrets.DAIS_ALLOWED_ORIGINS }}
         run: |
-          terraform init
-          terraform apply -auto-approve
+          python - <<'PY'
+          import json, os
+          keys = [
+              "DAIS_LLM_PROVIDER",
+              "DAIS_CLAUDE_API_KEY",
+              "DAIS_GEMINI_API_KEY",
+              "DAIS_FIREBASE_SERVICE_ACCOUNT_JSON",
+              "DAIS_ALLOWED_ORIGINS",
+          ]
+          json.dump({k: os.environ.get(k, "") for k in keys}, open("env.json", "w"))
+          PY
+
+      - name: Deploy backend
+        env:
+          VERSION: ${{ inputs.version != '' && format('v{0}', inputs.version) || needs.build.outputs.version }}
+        run: |
+          PROJECT_ID=$(gcloud config get-value project)
+          REGISTRY=${{ env.REGION }}-docker.pkg.dev/$PROJECT_ID/${{ env.GAR_REPO }}
+          gcloud run deploy mathquest-backend \
+            --image "$REGISTRY/mathquest-backend:$VERSION" \
+            --region "${{ env.REGION }}" \
+            --port 8080 \
+            --memory 1Gi \
+            --min-instances 0 \
+            --max-instances 1 \
+            --allow-unauthenticated \
+            --env-vars-file env.json
