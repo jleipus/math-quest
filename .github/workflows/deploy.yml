@@ -5,12 +5,12 @@ on:
     branches: [master]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to deploy (e.g. 1.0.0). Defaults to latest in CHANGELOG.txt."
+      image_tag:
+        description: "Existing image tag (12-char commit SHA) to redeploy. Leave empty to build and deploy the current commit."
         required: false
 
 env:
-  REGION: europe-west4
+  REGION: europe-north1
   GAR_REPO: mathquest
 
 jobs:
@@ -49,9 +49,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     needs: test
-    if: inputs.version == ''
+    # Skip the build when redeploying an existing image by tag
+    if: inputs.image_tag == ''
     outputs:
-      version: ${{ steps.version.outputs.tag }}
+      image_tag: ${{ steps.build.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,18 +63,18 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Build and push backend image
-        id: version
+        id: build
         run: |
-          VERSION=v$(head -1 CHANGELOG.txt)
+          TAG=${GITHUB_SHA::12}
           PROJECT_ID=$(gcloud config get-value project)
           REGISTRY=${{ env.REGION }}-docker.pkg.dev/$PROJECT_ID/${{ env.GAR_REPO }}
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-          docker build -t $REGISTRY/mathquest-backend:$VERSION -t $REGISTRY/mathquest-backend:latest -f ./backend/Dockerfile .
-          docker push $REGISTRY/mathquest-backend:$VERSION
+          docker build -t $REGISTRY/mathquest-backend:$TAG -t $REGISTRY/mathquest-backend:latest -f ./backend/Dockerfile .
+          docker push $REGISTRY/mathquest-backend:$TAG
           docker push $REGISTRY/mathquest-backend:latest
 
-          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
   deploy:
     runs-on: ubuntu-latest
@@ -114,12 +115,12 @@ jobs:
 
       - name: Deploy backend
         env:
-          VERSION: ${{ inputs.version != '' && format('v{0}', inputs.version) || needs.build.outputs.version }}
+          IMAGE_TAG: ${{ inputs.image_tag != '' && inputs.image_tag || needs.build.outputs.image_tag }}
         run: |
           PROJECT_ID=$(gcloud config get-value project)
           REGISTRY=${{ env.REGION }}-docker.pkg.dev/$PROJECT_ID/${{ env.GAR_REPO }}
           gcloud run deploy mathquest-backend \
-            --image "$REGISTRY/mathquest-backend:$VERSION" \
+            --image "$REGISTRY/mathquest-backend:$IMAGE_TAG" \
             --region "${{ env.REGION }}" \
             --port 8080 \
             --memory 1Gi \

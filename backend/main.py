@@ -55,7 +55,7 @@ class CatchUnhandledMiddleware:
             await response(scope, receive, send)
 
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
+app = FastAPI(title=settings.app_name)
 
 # Rate limiting
 app.state.limiter = limiter

@@ -9,7 +9,6 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "MathQuest API"
-    app_version: str = "0.1.0"
 
     # Security
     allowed_origins: list[str] = ["*"]
